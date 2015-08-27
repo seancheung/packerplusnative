@@ -3,6 +3,11 @@
 *.lo
 *.o
 *.obj
+*.sdf
+Debug/
+Release/
+x64/
+x86/
 
 # Precompiled Headers
 *.gch
