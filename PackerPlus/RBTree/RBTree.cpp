@@ -6,12 +6,6 @@ RBTree<T>::RBTree()
 }
 
 template <class T>
-RBTree<T>::RBTree(T* left, T* right) : left(left),
-                                       right(right)
-{
-}
-
-template <class T>
 void RBTree<T>::release(void* & pointer)
 {
 	if (pointer != nullptr)
@@ -47,22 +41,16 @@ void RBTree<T>::dispose_children()
 }
 
 template <class T>
-std::vector<T*> RBTree<T>::get_children()
+void RBTree<T>::get_children(std::vector<T*>& children)
 {
-	std::vector<T*> v;
 	if (left != nullptr)
 	{
-		for (T* child : left->get_children())
-		{
-			v.push_back(child);
-		}
+		static_cast<RBTree<T>*>(left)->get_children(children);
+		children.push_back(left);
 	}
 	if (right != nullptr)
 	{
-		for (T* child : right->get_children())
-		{
-			v.push_back(child);
-		}
+		static_cast<RBTree<T>*>(right)->get_children(children);
+		children.push_back(right);
 	}
-	return v;
 }

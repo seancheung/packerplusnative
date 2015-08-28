@@ -10,7 +10,6 @@ public:
 	}
 
 	RBTree();
-	RBTree(T* left, T* right);
 	/*left and right node; 
 	they should be initilized and disposed at the same time;*/
 	T *left, *right;
@@ -21,7 +20,7 @@ public:
 	/*dispose children recursively*/
 	virtual void dispose_children();
 	/*get children recursively*/
-	std::vector<T*> get_children();
+	void get_children(std::vector<T*>& children);
 protected:
 	/*release pointer*/
 	static void release(void* & pointer);

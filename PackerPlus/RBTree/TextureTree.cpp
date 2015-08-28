@@ -6,33 +6,32 @@ TextureTree::TextureTree()
 
 TextureTree::TextureTree(const Rect<int> rect)
 {
-	this->rect = new Rect<int>(rect);
+	this->rect = Rect<int>(rect);
 }
 
-TextureTree* TextureTree::add_texture(CxImage* texture, int index, const char* name)
+bool TextureTree::add_texture(CxImage& texture, int index, const char* name)
 {
-	if (texture == nullptr)
-		return nullptr;
+	if (texture.GetBits() == nullptr)
+		return false;
 	if (has_children())
 	{
 		/*find the deepest node*/
-		TextureTree* complete = left->add_texture(texture, index, name);
-		if (complete != nullptr)
-			return complete;
+		if (left->add_texture(texture, index, name))
+			return true;
 		return right->add_texture(texture, index, name);
 	}
 
 	/*already filled*/
 	if (_filled)
-		return nullptr;
-	int rw = rect->width();
-	int rh = rect->height();
-	int tw = texture->GetWidth();
-	int th = texture->GetHeight();
+		return false;
+	int rw = rect.width();
+	int rh = rect.height();
+	int tw = texture.GetWidth();
+	int th = texture.GetHeight();
 
 	/*no available space to fit*/
 	if (rw < tw || rh < th)
-		return nullptr;
+		return false;
 
 	/*Perfectly fit*/
 	if (rw == tw && rh == th)
@@ -53,42 +52,42 @@ TextureTree* TextureTree::add_texture(CxImage* texture, int index, const char* n
 	/*horizontal*/
 	if (deltaw > deltah)
 	{
-		left->rect = new Rect<int>(rect->xMin, rect->yMin, tw, rh);
-		right->rect = new Rect<int>(rect->xMin + tw + padding, rect->yMin, rw - tw - padding, rh);
+		left->rect = Rect<int>(rect.xMin, rect.yMin, tw, rh);
+		right->rect = Rect<int>(rect.xMin + tw + padding, rect.yMin, rw - tw - padding, rh);
 	}
 	/*vertical*/
 	else
 	{
-		left->rect = new Rect<int>(rect->xMin, rect->yMin, rw, th);
-		right->rect = new Rect<int>(rect->xMin, rect->yMin + th + padding, rw, rh - th - padding);
+		left->rect = Rect<int>(rect.xMin, rect.yMin, rw, th);
+		right->rect = Rect<int>(rect.xMin, rect.yMin + th + padding, rw, rh - th - padding);
 	}
 
 	return left->add_texture(texture, index, name);
 }
 
-std::vector<TextureTree*> TextureTree::get_bounds()
+void TextureTree::get_bounds(std::vector<TextureTree*>& bounds)
 {
-	std::vector<TextureTree*> v;
-	for (TextureTree* child : get_children())
+	std::vector<TextureTree*> children;
+	get_children(children);
+	for (TextureTree* child : children)
 	{
 		if (child != nullptr && child->_filled)
-			v.push_back(child);
+			bounds.push_back(child);
 	}
-	return v;
 }
 
-std::vector<char*> TextureTree::get_names()
+void TextureTree::get_names(std::vector<char*>& names)
 {
-	std::vector<char*> v;
-	for (TextureTree* bound : get_bounds())
+	std::vector<TextureTree*> bounds;
+	get_bounds(bounds);
+	for (TextureTree* bound : bounds)
 	{
 		if (bound != nullptr && bound->_filled)
-			v.push_back(bound->name);
+			names.push_back(bound->name);
 	}
-	return v;
 }
 
-void TextureTree::build(CxImage* output)
+void TextureTree::build(CxImage& output)
 {
 	/*build children*/
 	if (has_children())
@@ -96,17 +95,17 @@ void TextureTree::build(CxImage* output)
 		left->build(output);
 		right->build(output);
 	}
-	if (texture != nullptr)
+	if (_filled)
 	{
-		int tw = texture->GetWidth();
-		int th = texture->GetHeight();
+		int tw = texture.GetWidth();
+		int th = texture.GetHeight();
 
 		for (size_t x = 0; x < tw; x++)
 		{
 			for (size_t y = 0; y < th; y++)
 			{
-				RGBQUAD pixel = texture->GetPixelColor(x, y, true);
-				output->SetPixelColor(x + rect->xMin, y + rect->yMin, pixel, true);
+				RGBQUAD pixel = texture.GetPixelColor(x, y, true);
+				output.SetPixelColor(x + rect.xMin, y + rect.yMin, pixel, true);
 			}
 		}
 
@@ -116,25 +115,24 @@ void TextureTree::build(CxImage* output)
 			for (size_t y = 0; y < th; y++)
 			{
 				int x = tw - 1;
-				RGBQUAD pixel = texture->GetPixelColor(x, y, true);
-				output->SetPixelColor(x + rect->xMin + padding, y + rect->yMin, pixel, true);
+				RGBQUAD pixel = texture.GetPixelColor(x, y, true);
+				output.SetPixelColor(x + rect.xMin + padding, y + rect.yMin, pixel, true);
 			}
 			for (size_t x = 0; x < th; x++)
 			{
 				int y = th - 1;
-				RGBQUAD pixel = texture->GetPixelColor(x, y, true);
-				output->SetPixelColor(x + rect->xMin, y + rect->yMin + padding, pixel, true);
+				RGBQUAD pixel = texture.GetPixelColor(x, y, true);
+				output.SetPixelColor(x + rect.xMin, y + rect.yMin + padding, pixel, true);
 			}
 		}
 	}
 }
 
 void TextureTree::dispose_children()
-{
-	if (texture != nullptr)
-	{
-		delete[] texture;
-		texture = nullptr;
-	}
+{	
 	RBTree<TextureTree>::dispose_children();
+}
+
+TextureTree::~TextureTree()
+{
 }

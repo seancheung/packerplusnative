@@ -16,24 +16,25 @@ public:
 	requires padding*/
 	static bool bleed;
 	/*texture rect*/
-	Rect<int>* rect;
+	Rect<int> rect;
 	/*texture*/
-	CxImage* texture;
+	CxImage texture;
 	/*tile name*/
 	char* name;
 	/*texture index*/
 	int index;
 	/*add texture;
 	if failed, null will be returned*/
-	TextureTree* add_texture(CxImage* texture, int index, const char* name);
+	bool add_texture(CxImage& texture, int index, const char* name);
 	/*get valid tiles*/
-	std::vector<TextureTree*> get_bounds();
+	void get_bounds(std::vector<TextureTree*>& bounds);
 	/*get valid tiles' names*/
-	std::vector<char*> get_names();
+	void get_names(std::vector<char*>& names);
 	/*build all tiles into target texture*/
-	void build(CxImage* output);
+	void build(CxImage& output);
 	/*dispose texture then call base*/
 	void dispose_children() override;
+	virtual ~TextureTree();
 private:
 	bool _filled;
 };
