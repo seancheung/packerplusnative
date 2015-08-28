@@ -9,16 +9,16 @@ TextureTree::TextureTree(const Rect<int> rect)
 	this->rect = Rect<int>(rect);
 }
 
-bool TextureTree::add_texture(CxImage& texture, int index, const char* name)
+bool TextureTree::add_texture(CxImage& input, int index, const char* name)
 {
-	if (texture.GetBits() == nullptr)
+	if (input.GetBits() == nullptr)
 		return false;
 	if (has_children())
 	{
 		/*find the deepest node*/
-		if (left->add_texture(texture, index, name))
+		if (left->add_texture(input, index, name))
 			return true;
-		return right->add_texture(texture, index, name);
+		return right->add_texture(input, index, name);
 	}
 
 	/*already filled*/
@@ -26,8 +26,8 @@ bool TextureTree::add_texture(CxImage& texture, int index, const char* name)
 		return false;
 	int rw = rect.width();
 	int rh = rect.height();
-	int tw = texture.GetWidth();
-	int th = texture.GetHeight();
+	int tw = input.GetWidth();
+	int th = input.GetHeight();
 
 	/*no available space to fit*/
 	if (rw < tw || rh < th)
@@ -36,7 +36,7 @@ bool TextureTree::add_texture(CxImage& texture, int index, const char* name)
 	/*Perfectly fit*/
 	if (rw == tw && rh == th)
 	{
-		this->texture = texture;
+		this->texture = input;
 		_filled = 1;
 		this->index = index;
 		this->name = const_cast<char*>(name);
@@ -62,7 +62,7 @@ bool TextureTree::add_texture(CxImage& texture, int index, const char* name)
 		right->rect = Rect<int>(rect.xMin, rect.yMin + th + padding, rw, rh - th - padding);
 	}
 
-	return left->add_texture(texture, index, name);
+	return left->add_texture(input, index, name);
 }
 
 void TextureTree::get_bounds(std::vector<TextureTree*>& bounds)
@@ -128,9 +128,9 @@ void TextureTree::build(CxImage& output)
 	}
 }
 
-void TextureTree::dispose_children()
-{	
-	RBTree<TextureTree>::dispose_children();
+bool TextureTree::operator<(const TextureTree& tree) const
+{
+	return index < tree.index;
 }
 
 TextureTree::~TextureTree()

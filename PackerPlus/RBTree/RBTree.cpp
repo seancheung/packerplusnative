@@ -6,16 +6,6 @@ RBTree<T>::RBTree()
 }
 
 template <class T>
-void RBTree<T>::release(void* & pointer)
-{
-	if (pointer != nullptr)
-	{
-		delete[] pointer;
-		pointer = nullptr;
-	}
-}
-
-template <class T>
 bool RBTree<T>::has_children()
 {
 	return left != nullptr && right != nullptr;
@@ -32,12 +22,20 @@ void RBTree<T>::init_children()
 template <class T>
 void RBTree<T>::dispose_children()
 {
-	if (left != nullptr)
+	if (left)
 		static_cast<RBTree<T>*>(left)->dispose_children();
-	if (right != nullptr)
+	if (right)
 		static_cast<RBTree<T>*>(right)->dispose_children();
-	release(&left);
-	release(&right);
+	if (left)
+	{
+		delete[] left;
+		left = nullptr;
+	}
+	if (right)
+	{
+		delete[] right;
+		right = nullptr;
+	}
 }
 
 template <class T>

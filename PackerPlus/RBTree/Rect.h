@@ -15,9 +15,6 @@ struct Point
 	{
 	}
 
-	Point(const Point<T> p) :x(p->x), y(p->y)
-	{
-	}
 };
 
 template <class T>

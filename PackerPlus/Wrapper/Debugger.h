@@ -1,3 +1,4 @@
+#pragma once
 #include "DLLAPI.h"
 
 typedef void (_stdcall*debugcall)(const char*);

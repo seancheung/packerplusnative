@@ -21,7 +21,4 @@ public:
 	virtual void dispose_children();
 	/*get children recursively*/
 	void get_children(std::vector<T*>& children);
-protected:
-	/*release pointer*/
-	static void release(void* & pointer);
 };

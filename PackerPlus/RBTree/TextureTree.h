@@ -1,4 +1,4 @@
-#include "RBTree.h"
+#include "RBTree.cpp"
 #include "Rect.h"
 #include "../CXImage/ximage.h"
 
@@ -9,12 +9,12 @@ public:
 
 	TextureTree();
 	/*initialize with a specific rect*/
-	explicit TextureTree(const Rect<int> rect);
+	TextureTree(const Rect<int> rect);
 	/*global padding*/
-	static int padding;
+	int padding;
 	/*use bleeding tech;
 	requires padding*/
-	static bool bleed;
+	bool bleed;
 	/*texture rect*/
 	Rect<int> rect;
 	/*texture*/
@@ -25,15 +25,14 @@ public:
 	int index;
 	/*add texture;
 	if failed, null will be returned*/
-	bool add_texture(CxImage& texture, int index, const char* name);
+	bool add_texture(CxImage& input, int index, const char* name);
 	/*get valid tiles*/
 	void get_bounds(std::vector<TextureTree*>& bounds);
 	/*get valid tiles' names*/
 	void get_names(std::vector<char*>& names);
 	/*build all tiles into target texture*/
 	void build(CxImage& output);
-	/*dispose texture then call base*/
-	void dispose_children() override;
+	bool operator < (const TextureTree& tree) const;
 	virtual ~TextureTree();
 private:
 	bool _filled;
