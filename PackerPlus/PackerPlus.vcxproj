@@ -118,6 +118,8 @@
     <ClCompile Include="png\pngwrite.c" />
     <ClCompile Include="png\pngwtran.c" />
     <ClCompile Include="png\pngwutil.c" />
+    <ClCompile Include="RBTree\RBTree.cpp" />
+    <ClCompile Include="RBTree\TextureTree.cpp" />
     <ClCompile Include="tiff\fax3sm_winnt.c" />
     <ClCompile Include="tiff\tif_aux.c" />
     <ClCompile Include="tiff\tif_close.c" />
@@ -189,6 +191,9 @@
     <ClInclude Include="CXImage\ximawmf.h" />
     <ClInclude Include="CXImage\xiofile.h" />
     <ClInclude Include="CXImage\xmemfile.h" />
+    <ClInclude Include="RBTree\RBTree.h" />
+    <ClInclude Include="RBTree\TextureTree.h" />
+    <ClInclude Include="RBTree\Rect.h" />
     <ClInclude Include="Wrapper\DLLAPI.h" />
     <ClInclude Include="jbig\jbig.h" />
     <ClInclude Include="jpeg\jchuff.h" />

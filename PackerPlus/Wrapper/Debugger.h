@@ -29,11 +29,12 @@ public:
 	}
 };
 
-extern "C" inline EXPORT void link_debug(debugcall log, debugcall error, debugcall warning)
+extern "C" inline EXPORT void link_debug(debugcall log, debugcall error, debugcall warning, bool logResult)
 {
 	_log = log;
 	_error = error;
 	_warning = warning;
 
-	Debug::log("Debug linked");
+	if (logResult)
+		Debug::log("Debug linked");
 }

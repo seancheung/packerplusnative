@@ -444,6 +444,12 @@
     <ClCompile Include="zlib\zutil.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="RBTree\RBTree.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RBTree\TextureTree.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CXImage\xfile.h">
@@ -627,6 +633,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Wrapper\DLLAPI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RBTree\RBTree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RBTree\TextureTree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RBTree\Rect.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
