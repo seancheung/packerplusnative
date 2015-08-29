@@ -9,6 +9,11 @@ TextureTree::TextureTree(const Rect<int> rect)
 	this->rect = Rect<int>(rect);
 }
 
+TextureTree::~TextureTree()
+{
+	dispose_children();
+}
+
 bool TextureTree::add_texture(CxImage& input, int index, const char* name)
 {
 	if (input.GetBits() == nullptr)
@@ -39,7 +44,7 @@ bool TextureTree::add_texture(CxImage& input, int index, const char* name)
 		this->texture = input;
 		_filled = 1;
 		this->index = index;
-		this->name = const_cast<char*>(name);
+		strcpy(this->name,name);
 		return this;
 	}
 
@@ -131,8 +136,4 @@ void TextureTree::build(CxImage& output)
 bool TextureTree::operator<(const TextureTree& tree) const
 {
 	return index < tree.index;
-}
-
-TextureTree::~TextureTree()
-{
 }

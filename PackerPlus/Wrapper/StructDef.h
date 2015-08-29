@@ -5,7 +5,7 @@ typedef Rect<float> UVRect;
 typedef unsigned char BYTE;
 
 /*size info*/
-typedef union Size
+union Size
 {
 	int width;
 	int height;
@@ -18,40 +18,61 @@ typedef union Size
 	Size()
 	{
 	}
-} Size;
+
+	~Size()
+	{
+	}
+};
 
 /*textures in&out*/
-typedef struct Texture
+struct Texture
 {
+	Texture()
+	{
+	}
+
+	~Texture()
+	{
+		delete[] name;
+		delete[] path;
+	}
+
 	char* path;
 	char* name;
 	Size size;
-} Texture;
+};
 
 /*sprite data out*/
-typedef struct Sprite
+struct Sprite
 {
+	Sprite()
+	{
+	}
+
+	~Sprite()
+	{
+		delete[] name;
+	}
+
 	char* name;
 	UVRect uv;
 	Size size;
 	int section;
-} Sprite;
-
-/*atlas data out*/
-typedef struct Atlas
-{
-	Size maxSize;
-	int texture_count;
-	Texture* textures;
-	int sprite_count;
-	Sprite* sprites;
-} Atlas;
+};
 
 /*RGB*/
-typedef struct Color
+struct Color
 {
+	Color()
+	{
+	}
+
+	~Color()
+	{
+	}
+
 	BYTE r;
 	BYTE g;
 	BYTE b;
 	BYTE a;
-} Color;
+};

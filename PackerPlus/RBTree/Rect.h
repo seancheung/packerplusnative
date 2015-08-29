@@ -1,32 +1,10 @@
 #pragma once
 template <class T>
-struct Point
-{
-	T x, y;
-
-	Point(T x, T y)
-		: x(x),
-		  y(y)
-	{
-	}
-
-
-	Point() :x(), y()
-	{
-	}
-
-};
-
-template <class T>
 struct Rect
 {
 	T xMin, yMin, xMax, yMax;
 
 	Rect() :xMin(), yMin(), xMax(), yMax()
-	{
-	}
-
-	Rect(Point<T> p, T width, T height) : xMin(p.x), yMin(p.y), xMax(p.x + width), yMax(p.y + height)
 	{
 	}
 
@@ -44,8 +22,7 @@ struct Rect
 		return yMax - yMin;
 	}
 
-	Point<T> center()
+	~Rect()
 	{
-		return new Point<T>(xMin + width() / 2, yMin + height() / 2);
 	}
 };

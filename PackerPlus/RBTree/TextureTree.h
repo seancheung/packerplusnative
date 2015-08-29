@@ -10,6 +10,7 @@ public:
 	TextureTree();
 	/*initialize with a specific rect*/
 	TextureTree(const Rect<int> rect);
+	virtual ~TextureTree();
 	/*global padding*/
 	int padding;
 	/*use bleeding tech;
@@ -32,8 +33,7 @@ public:
 	void get_names(std::vector<char*>& names);
 	/*build all tiles into target texture*/
 	void build(CxImage& output);
-	bool operator < (const TextureTree& tree) const;
-	virtual ~TextureTree();
+	bool operator < (const TextureTree& tree) const;	
 private:
 	bool _filled;
 };

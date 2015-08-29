@@ -4,12 +4,9 @@
 template <class T>
 class RBTree
 {
-public:
-	virtual ~RBTree()
-	{
-	}
-
+public:	
 	RBTree();
+	virtual ~RBTree();
 	/*left and right node; 
 	they should be initilized and disposed at the same time;*/
 	T *left, *right;
