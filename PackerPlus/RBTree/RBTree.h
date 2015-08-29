@@ -14,8 +14,6 @@ public:
 	bool has_children();
 	/*initialize both children*/
 	void init_children();
-	/*dispose children recursively*/
-	virtual void dispose_children();
 	/*get children recursively*/
 	void get_children(std::vector<T*>& children);
 };

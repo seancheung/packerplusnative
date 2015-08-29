@@ -3,13 +3,17 @@
 template <class T>
 RBTree<T>::RBTree()
 {
+	left = nullptr;
+	right = nullptr;
 }
 
 template <class T>
 RBTree<T>::~RBTree()
 {
-	delete[] left;
-	delete[] right;
+	if (left != nullptr)
+		delete[] left;
+	if (right != nullptr)
+		delete[] right;
 }
 
 template <class T>
@@ -21,28 +25,8 @@ bool RBTree<T>::has_children()
 template <class T>
 void RBTree<T>::init_children()
 {
-	dispose_children();
 	left = new T();
 	right = new T();
-}
-
-template <class T>
-void RBTree<T>::dispose_children()
-{
-	if (left != nullptr)
-		static_cast<RBTree<T>*>(left)->dispose_children();
-	if (right != nullptr)
-		static_cast<RBTree<T>*>(right)->dispose_children();
-	if (left != nullptr)
-	{
-		delete[] left;
-		left = nullptr;
-	}
-	if (right != nullptr)
-	{
-		delete[] right;
-		right = nullptr;
-	}
 }
 
 template <class T>

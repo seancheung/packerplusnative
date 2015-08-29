@@ -81,7 +81,7 @@ bool pack(const Texture textures[], const int count, const Size max_size, const 
 	{
 		if (textures[i].size.width > max_size.width || textures[i].size.height > max_size.height)
 		{
-			char* error;
+			char* error = new char[1024];
 			concat("Target texture size is larger than max_size", textures[i].path, error);
 			Debug::error(error);
 			delete[] error;
@@ -98,41 +98,48 @@ bool pack(const Texture textures[], const int count, const Size max_size, const 
 	/*1, 4, 8, 24*/
 	if (bit_depth != 1 && bit_depth != 4 && bit_depth != 8 && bit_depth != 24)
 	{
-		Debug::warning("Bitdepth invalid! 24 will be used.");
+		Debug::warning("Color depth invalid! 24 will be used.");
 		bit_depth = 24;
 	}
 
 	/*load images*/
-	std::vector<CxImage> images;
+	std::vector<CxImage*> images;
 	for (int i = 0; i < count; i++)
 	{
 		wchar_t* p;
 		convert_char(textures[i].path, p);
-		CxImage image = CxImage(p, format);
+		CxImage* image = new CxImage(p, format);
 		delete[] p;
 		images.push_back(image);
 	}
 
 	/*allocate rects*/
+
 	int index = count - 1;
 	Rect<int> rect = Rect<int>(0, 0, max_size.width, max_size.height);
-	std::vector<TextureTree> trees;
+	std::vector<TextureTree*> trees;
 	while (index >= 0)
 	{
-		trees.push_back(TextureTree(rect));
+		trees.push_back(new TextureTree(rect));
 		int tindex = 0;
 
 		while (index >= 0)
 		{
-			for (TextureTree tree : trees)
+			int n = 0;
+			for (TextureTree* tree : trees)
 			{
-				if (tree.add_texture(images[index], tindex++, textures[index].path))
+				if (tree->add_texture(images[index], tindex++, textures[index].name))
+					break;
+				if (n = trees.size() - 1)
 				{
 					Debug::log("Multiple textures generated");
 					break;
 				}
-				index--;
+				n++;
 			}
+			if (n = trees.size() - 1)
+				break;
+			index--;
 		}
 	}
 
@@ -140,33 +147,38 @@ bool pack(const Texture textures[], const int count, const Size max_size, const 
 	/*TODO: call extern delete for managed data*/
 	output_textures = new Texture[output_texture_count];
 
-	std::vector<Sprite> sprites;
+	std::vector<Sprite*> sprites;
 	for (int i = 0; i < trees.size(); i++)
 	{
-		strcpy(output_textures[i].name,std::to_string(i).c_str());
+		output_textures[i].name = new char[128];
+		strcpy(output_textures[i].name, std::to_string(i).c_str());
 		output_textures[i].size = max_size;
+		output_textures[i].path = new char[1024];
 		if (i > 0)
 			concat(output_path, i, output_textures[i].path);
 		else
 			strcpy(output_textures[i].path, output_path);
 		/*color depth and image format*/
 		CxImage image = CxImage(max_size.width, max_size.height, bit_depth, format);
-		trees[i].build(image);
+		if (image.AlphaCreate())
+			image.AlphaSet(0);
+		trees[i]->build(image);
 		std::vector<TextureTree*> bounds;
-		trees[i].get_bounds(bounds);
+		trees[i]->get_bounds(bounds);
 		sort(bounds.begin(), bounds.end());
 		for (TextureTree* bound : bounds)
 		{
 			UVRect uv = UVRect(
-				bound->rect.xMin / trees[i].rect.width(),
-				bound->rect.yMin / trees[i].rect.height(),
-				bound->rect.width() / trees[i].rect.width(),
-				bound->rect.height() / trees[i].rect.height());
-			Sprite sprite = Sprite();
-			sprite.size = Size(bound->rect.width(), bound->rect.height());
-			sprite.name = bound->name;
-			sprite.uv = uv;
-			sprite.section = i;
+				bound->rect.xMin / trees[i]->rect.width(),
+				bound->rect.yMin / trees[i]->rect.height(),
+				bound->rect.width() / trees[i]->rect.width(),
+				bound->rect.height() / trees[i]->rect.height());
+			Sprite* sprite = new Sprite();
+			sprite->size = Size(bound->rect.width(), bound->rect.height());
+			sprite->name = new char[128];
+			strcpy(sprite->name, bound->name);
+			sprite->uv = uv;
+			sprite->section = i;
 			sprites.push_back(sprite);
 		}
 		wchar_t* p;
@@ -175,27 +187,42 @@ bool pack(const Texture textures[], const int count, const Size max_size, const 
 		delete[] p;
 		if (result)
 		{
-			char* output;
+			char* output = new char[1024];
 			concat("Successfully saved: ", textures[i].path, output);
 			Debug::log(output);
 			delete[] output;
 		}
 		else
 		{
-			char* output;
+			char* output = new char[1024];
 			concat("Failed to save: ", textures[i].path, output);
 			Debug::error(output);
 			delete[] output;
 		}
 	}
 
+	std::vector<TextureTree*>::iterator tree;
+	for (tree = trees.begin(); tree != trees.end(); ++tree)
+	{
+		delete[] *tree;
+	}
+	trees.clear();
+
 	output_sprite_count = sprites.size();
 	/*TODO: delete call*/
 	output_sprites = new Sprite[output_sprite_count];
 	for (int i = 0; i < output_sprite_count; i++)
 	{
-		output_sprites[i] = sprites[i];
+		output_sprites[i] = *sprites[i];
 	}
+	for (int i = 0; i < sprites.size(); i++)
+		delete[] sprites[i];
 
 	return true;
+}
+
+void release(void*& pointer)
+{
+	if (pointer != nullptr)
+		delete[] pointer;
 }

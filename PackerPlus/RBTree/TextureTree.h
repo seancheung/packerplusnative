@@ -19,14 +19,14 @@ public:
 	/*texture rect*/
 	Rect<int> rect;
 	/*texture*/
-	CxImage texture;
+	CxImage* image;
 	/*tile name*/
 	char* name;
 	/*texture index*/
 	int index;
 	/*add texture;
 	if failed, null will be returned*/
-	bool add_texture(CxImage& input, int index, const char* name);
+	bool add_texture(CxImage* input, int index, const char* name);
 	/*get valid tiles*/
 	void get_bounds(std::vector<TextureTree*>& bounds);
 	/*get valid tiles' names*/

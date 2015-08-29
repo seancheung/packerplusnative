@@ -29,12 +29,16 @@ struct Texture
 {
 	Texture()
 	{
+		name = nullptr;
+		path = nullptr;
 	}
 
 	~Texture()
 	{
-		delete[] name;
-		delete[] path;
+		if (name != nullptr)
+			delete[] name;
+		if (path != nullptr)
+			delete[] path;
 	}
 
 	char* path;
@@ -47,11 +51,13 @@ struct Sprite
 {
 	Sprite()
 	{
+		name = nullptr;
 	}
 
 	~Sprite()
 	{
-		delete[] name;
+		if (name != nullptr)
+			delete[] name;
 	}
 
 	char* name;
