@@ -28,7 +28,7 @@ char* append(const char* a, int i)
 	return const_cast<char*>((str.substr(0, index) + "_" + std::to_string(i) + std::string(dot + 1)).c_str());
 }
 
-void pack(const PackData* textures, const int count, const Size max_size, const char* path, Atlas* atlas)
+void pack(const Texture* textures, const int count, const Size max_size, const char* path, Atlas* atlas, int bit_depth, int format)
 {
 	/*length check*/
 	if (textures == nullptr || count == 0)
@@ -47,13 +47,26 @@ void pack(const PackData* textures, const int count, const Size max_size, const 
 		}
 	}
 
+	if (format < CXIMAGE_FORMAT_BMP || format > CXIMAGE_FORMAT_WMF)
+	{
+		Debug::warning("Unsupported format! PNG will be used.");
+		format = CXIMAGE_FORMAT_PNG;
+	}
+
+	/*1, 4, 8, 24*/
+	if (bit_depth != 1 && bit_depth != 4 && bit_depth != 8 && bit_depth != 24)
+	{
+		Debug::warning("Bitdepth invalid! 24 will be used.");
+		bit_depth = 24;
+	}
+
 	/*load images*/
 	std::vector<CxImage> images;
 	for (int i = 0; i < count; i++)
 	{
-		wchar_t* path = convert_char(textures[i].path);
-		CxImage image = CxImage(path, CXIMAGE_FORMAT_PNG);
-		delete[] path;
+		wchar_t* p = convert_char(textures[i].path);
+		CxImage image = CxImage(p, format);
+		delete[] p;
 		images.push_back(image);
 	}
 
@@ -89,13 +102,14 @@ void pack(const PackData* textures, const int count, const Size max_size, const 
 	for (int i = 0; i < trees.size(); i++)
 	{
 		atlas->textures[i] = Texture();
+		atlas->textures[i].name = const_cast<char*>(std::to_string(i).c_str());
 		atlas->textures[i].size = max_size;
 		if (i > 0)
 			atlas->textures[i].path = append(path, i);
 		else
 			atlas->textures[i].path = const_cast<char*>(path);
-		/*true color 24bit depth in png format*/
-		CxImage image = CxImage(max_size.width, max_size.height, 24, CXIMAGE_FORMAT_PNG);
+		/*color depth and image format*/
+		CxImage image = CxImage(max_size.width, max_size.height, bit_depth, format);
 		trees[i].build(image);
 		std::vector<TextureTree*> bounds;
 		trees[i].get_bounds(bounds);
@@ -114,7 +128,9 @@ void pack(const PackData* textures, const int count, const Size max_size, const 
 			sprite.section = i;
 			sprites.push_back(sprite);
 		}
-		bool result = image.Save(convert_char(atlas->textures[i].path), CXIMAGE_FORMAT_PNG);
+		wchar_t * p = convert_char(atlas->textures[i].path);
+		bool result = image.Save(p, format);
+		delete[] p;
 		if (result)
 			Debug::log(append("Successfully saved: ", textures[i].path));
 		else
@@ -129,19 +145,39 @@ void pack(const PackData* textures, const int count, const Size max_size, const 
 	atlas->sprites = &sprites[0];
 }
 
-void create_empty(const int width, const int height, const char* path)
+void create_empty(const int width, const int height, const char* path, int bit_depth, int format, const Color color)
 {
-	CxImage image = CxImage(width, height, 24, CXIMAGE_FORMAT_PNG);
-	auto color = RGBQUAD();
-	color.rgbRed = 100;
-	color.rgbGreen = 50;
-	color.rgbBlue = 200;
+	if (format < CXIMAGE_FORMAT_BMP || format > CXIMAGE_FORMAT_WMF)
+	{
+		Debug::warning("Unsupported format! PNG will be used.");
+		format = CXIMAGE_FORMAT_PNG;
+	}
+
+	RGBQUAD rgb = RGBQUAD();
+	rgb.rgbRed = color.r;
+	rgb.rgbGreen = color.g;
+	rgb.rgbBlue = color.b;
+	rgb.rgbReserved = color.a;
+	
+	/*1, 4, 8, 24*/
+	if (bit_depth != 1 && bit_depth != 4 && bit_depth != 8 && bit_depth != 24)
+	{
+		Debug::warning("Bitdepth invalid! 24 will be used.");
+		bit_depth = 24;
+	}
+
+	CxImage image = CxImage(width, height, bit_depth, format);
+	bool alpha = false;
+	if (rgb.rgbReserved != 255)
+		alpha = image.AlphaCreate();
 	for (int x = 0; x < width; x++)
 	{
 		for (int y = 0; y < height; y++)
 		{
-			image.SetPixelColor(x, y, color);
+			image.SetPixelColor(x, y, rgb, alpha);
 		}
 	}
-	image.Save(convert_char(path), CXIMAGE_FORMAT_PNG);
+	wchar_t * p = convert_char(path);
+	image.Save(p, CXIMAGE_FORMAT_PNG);
+	delete[] p;
 }

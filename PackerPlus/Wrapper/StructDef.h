@@ -1,7 +1,10 @@
 #include "../RBTree/Rect.h"
 
+/*float rect data*/
 typedef Rect<float> UVRect;
+typedef unsigned char BYTE;
 
+/*size info*/
 typedef union Size
 {
 	int width;
@@ -17,12 +20,15 @@ typedef union Size
 	}
 } Size;
 
+/*textures in&out*/
 typedef struct Texture
 {
 	char* path;
+	char* name;
 	Size size;
 } Texture;
 
+/*sprite data out*/
 typedef struct Sprite
 {
 	char* name;
@@ -31,6 +37,7 @@ typedef struct Sprite
 	int section;
 } Sprite;
 
+/*atlas data out*/
 typedef struct Atlas
 {
 	Size maxSize;
@@ -40,9 +47,11 @@ typedef struct Atlas
 	Sprite* sprites;
 } Atlas;
 
-typedef struct PackData
+/*RGB*/
+typedef struct Color
 {
-	char* path;
-	char* name;
-	Size size;
-} PackData;
+	BYTE r;
+	BYTE g;
+	BYTE b;
+	BYTE a;
+} Color;
