@@ -159,20 +159,27 @@ bool pack(const Texture textures[], const int count, const Size max_size, const 
 		else
 			strcpy(output_textures[i].path, output_path);
 		/*color depth and image format*/
-		CxImage image = CxImage(max_size.width, max_size.height, bit_depth, format);
+		CxImage image = CxImage(max_size.width, max_size.height, bit_depth, format);		
 		if (image.AlphaCreate())
 			image.AlphaSet(0);
 		trees[i]->build(image);
+		/*TODO: apply crop?*/
+		int rw = trees[i]->get_root_width();
+		int rh = trees[i]->get_root_height();
+		image.Crop(0,trees[i]->rect.height() - rh,rw,trees[i]->rect.height());
+		int w = image.GetWidth();
+
+		int h = image.GetHeight();
 		std::vector<TextureTree*> bounds;
 		trees[i]->get_bounds(bounds);
 		sort(bounds.begin(), bounds.end());
 		for (TextureTree* bound : bounds)
-		{
+		{			
 			UVRect uv = UVRect(
-				bound->rect.xMin / trees[i]->rect.width(),
-				bound->rect.yMin / trees[i]->rect.height(),
-				bound->rect.width() / trees[i]->rect.width(),
-				bound->rect.height() / trees[i]->rect.height());
+				bound->rect.xMin / w,
+				bound->rect.yMin / h,
+				bound->rect.width() / w,
+				bound->rect.height() / h);
 			Sprite* sprite = new Sprite();
 			sprite->size = Size(bound->rect.width(), bound->rect.height());
 			sprite->name = new char[128];

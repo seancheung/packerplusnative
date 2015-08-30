@@ -31,9 +31,11 @@ public:
 	void get_bounds(std::vector<TextureTree*>& bounds);
 	/*get valid tiles' names*/
 	void get_names(std::vector<char*>& names);
+	/*get taken width*/
+	int get_root_width();
+	/*get taken height*/
+	int get_root_height();
 	/*build all tiles into target texture*/
 	void build(CxImage& output);
-	bool operator < (const TextureTree& tree) const;	
-private:
-	bool _filled;
+	bool operator < (const TextureTree& tree) const;
 };
