@@ -8,12 +8,18 @@ void concat(const WCHAR* a, int i, WCHAR*& output)
 {
 	const WCHAR* dot = _tcschr(a, '.');
 	if (!dot || dot == a)
-	_tcscpy(output, (std::wstring(a) + std::to_wstring(i)).c_str());
+	{
+		const WCHAR* copy = (std::wstring(a) + std::to_wstring(i)).c_str();
+		int len = wcslen(copy) + sizeof(WCHAR);
+		_tcscpy_s(output, len, copy);
+	}
 	else
 	{
 		std::wstring str = std::wstring(a);
 		int index = str.find_last_of('.');
-		_tcscpy(output, (str.substr(0, index) + _T("_") + std::to_wstring(i) + std::wstring(dot + 1)).c_str());
+		const WCHAR* copy = (str.substr(0, index) + _T("_") + std::to_wstring(i) + std::wstring(dot + 1)).c_str();
+		int len = wcslen(copy) + sizeof(WCHAR);
+		_tcscpy_s(output, len, copy);
 	}
 }
 
@@ -53,7 +59,7 @@ void create_empty(const int width, const int height, const WCHAR* path, int bit_
 	image.Save(path, CXIMAGE_FORMAT_PNG);
 }
 
-bool pack(const Texture textures[], const int count, const int max_width, const int max_height, const WCHAR* output_path, int bit_depth, int format, int& output_texture_count, Texture*& output_textures, int& output_sprite_count, Sprite*& output_sprites)
+bool pack(const Texture textures[], const int count, const int max_width, const int max_height, const WCHAR* output_path, int bit_depth, int format, char*& output)
 {
 	/*length check*/
 	if (textures == nullptr || count == 0)
@@ -124,32 +130,38 @@ bool pack(const Texture textures[], const int count, const int max_width, const 
 		}
 	}
 
-	output_texture_count = trees.size();
-	/*TODO: call extern delete for managed data*/
-	output_textures = new Texture[output_texture_count];
-
+	std::vector<Texture*> output_textures;
 	std::vector<Sprite*> sprites;
+
 	for (int i = 0; i < trees.size(); i++)
 	{
-		output_textures[i].name = new char[128];
-		strcpy(output_textures[i].name, std::to_string(i).c_str());
-		output_textures[i].path = new WCHAR[1024];
+		Texture* texture = new Texture();
+		auto name = std::to_string(i).c_str();
+		int nlen = strlen(name) + sizeof(char);
+		texture->name = new char[nlen];
+		strcpy_s(texture->name, nlen, name);
 		if (i > 0)
-			concat(output_path, i, output_textures[i].path);
+			concat(output_path, i, texture->path);
 		else
-		_tcscpy(output_textures[i].path, output_path);
+		{
+			int plen = wcslen(output_path) + sizeof(WCHAR);
+			texture->path = new WCHAR[plen];
+			_tcscpy_s(texture->path, plen, output_path);
+		}
+
 		/*color depth and image format*/
 		CxImage image = CxImage(max_width, max_height, bit_depth, format);
 		if (image.AlphaCreate())
 			image.AlphaSet(0);
 		trees[i]->build(image);
-		/*TODO: apply crop?*/
+
 		int rw = trees[i]->get_root_width();
 		int rh = trees[i]->get_root_height();
+		/*apply crop*/
 		image.Crop(0, trees[i]->rect.height() - rh, rw, trees[i]->rect.height());
 		int w = image.GetWidth();
-
 		int h = image.GetHeight();
+
 		std::vector<TextureTree*> bounds;
 		trees[i]->get_bounds(bounds);
 		sort(bounds.begin(), bounds.end());
@@ -162,24 +174,26 @@ bool pack(const Texture textures[], const int count, const int max_width, const 
 				float(bound->rect.height()) / float(h));
 			Sprite* sprite = new Sprite();
 			sprite->rect = bound->rect;
-			sprite->name = new char[128];
-			strcpy(sprite->name, bound->name);
+			int len = strlen(bound->name) + sizeof(char);
+			sprite->name = new char[len];
+			strcpy_s(sprite->name, len, bound->name);
 			sprite->uv = uv;
 			sprite->section = i;
 			sprites.push_back(sprite);
 		}
 
-		bool result = image.Save(output_textures[i].path, format);
-
-		if (result)
-		{
-			Debug::log("Successfully saved");
-		}
+		if (image.Save(texture->path, format))
+			output_textures.push_back(texture);
 		else
-		{
-			Debug::error("Failed to save");
-		}
+			Debug::error(image.GetLastError());
 	}
+
+	char* json;
+	to_json(output_textures, sprites, json);
+	int len = strlen(json) + sizeof(char);
+	output = static_cast<char*>(CoTaskMemAlloc(len));
+	strcpy_s(output, len, json);
+	delete[] json;
 
 	std::vector<TextureTree*>::iterator tree;
 	for (tree = trees.begin(); tree != trees.end(); ++tree)
@@ -188,17 +202,12 @@ bool pack(const Texture textures[], const int count, const int max_width, const 
 	}
 	trees.clear();
 
-	output_sprite_count = sprites.size();
-	/*TODO: delete call*/
-	output_sprites = new Sprite[output_sprite_count];
-	for (int i = 0; i < output_sprite_count; i++)
+	std::vector<Texture*>::iterator texture;
+	for (texture = output_textures.begin(); texture != output_textures.end(); ++texture)
 	{
-		output_sprites[i].name = new char[128];
-		strcpy(output_sprites[i].name, sprites[i]->name);
-		output_sprites[i].section = sprites[i]->section;
-		output_sprites[i].rect = sprites[i]->rect;
-		output_sprites[i].uv = sprites[i]->uv;
+		delete *texture;
 	}
+	sprites.clear();
 
 	std::vector<Sprite*>::iterator sprite;
 	for (sprite = sprites.begin(); sprite != sprites.end(); ++sprite)
@@ -210,23 +219,20 @@ bool pack(const Texture textures[], const int count, const int max_width, const 
 	return true;
 }
 
-const char* to_json(const std::vector<Texture*> textures, std::vector<Sprite*> sprites)
+void to_json(const std::vector<Texture*> textures, std::vector<Sprite*> sprites, char*& json)
 {
 	Json::Value output;
 	Json::Value tv, sv;
-	output.append(tv);
-	output.append(sv);
 	for (Texture* texture : textures)
 	{
-		Json::Value t;
-		tv.append(t);
+		Json::Value t;		
 		t["name"] = texture->name;
 		t["path"] = texture->path;
+		tv.append(t);
 	}
 	for (Sprite* sprite : sprites)
 	{
 		Json::Value s;
-		sv.append(s);
 		s["name"] = sprite->name;
 		s["section"] = sprite->section;
 		s["rect"]["xMin"] = sprite->rect.xMin;
@@ -237,13 +243,19 @@ const char* to_json(const std::vector<Texture*> textures, std::vector<Sprite*> s
 		s["uv"]["xMax"] = sprite->uv.xMax;
 		s["uv"]["yMin"] = sprite->uv.yMin;
 		s["uv"]["yMax"] = sprite->uv.yMax;
+		sv.append(s);
 	}
 
-	return output.toStyledString().c_str();
+	output["textures"] = tv;
+	output["sprites"] = sv;
+	const char* data = output.toStyledString().c_str();
+	int len = strlen(data) + sizeof(char);
+	json = new char[len];
+	strcpy_s(json, len, data);
 }
 
 void release(void* pointer)
 {
 	if (pointer != nullptr)
-		delete pointer;	
+		delete pointer;
 }

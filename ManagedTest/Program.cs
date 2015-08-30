@@ -19,7 +19,7 @@ namespace ManagedTest
 			AtlasPlus atlas = new AtlasPlus();
 			Console.ReadLine();
 			Pack(textures, atlas, 1024, 1024, ColorDepth.TrueColor, Format.PNG, "pack.png");
-			Console.WriteLine(atlas);
+			//Console.WriteLine(atlas);
 			//Create(1024, 1024, "empty.png", ColorDepth.TrueColor, Format.PNG, new Color(100, 250, 200, 255));
 			Console.ReadLine();
 		}
@@ -35,24 +35,20 @@ namespace ManagedTest
 		private static extern bool Pack([In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] Texture[] textures,
 			[In] int count, [In] int maxWidth, int maxHeight, [In, MarshalAs(UnmanagedType.LPWStr)] string path,
 			[In] ColorDepth depth, [In] Format format,
-			[Out] out int textureCount, [Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 7)] out Texture[] atlasTextures,
-			[Out] out int spriteCount, [Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 9)] out Sprite[] sprites);
+			[Out, MarshalAs(UnmanagedType.LPStr)] out string json);
 
 		public static void Pack(Texture[] textures, AtlasPlus atlas, int width, int height, ColorDepth depth,
 			Format format, string path)
 		{
 			var count = textures.Length;
 			//var size = new Size {width = width, height = height};
-			Atlas info = new Atlas();
-			Texture[] atlasTextures;
-			Sprite[] sprites;
-			int textureCount;
-			int spriteCount;
+			//Atlas info = new Atlas();
+			string output;
 
 
-			Pack(textures, textures.Length, width, height, path, depth, format, out textureCount, out atlasTextures,
-				out spriteCount,
-				out sprites);
+			Pack(textures, textures.Length, width, height, path, depth, format, out output);
+
+			Console.WriteLine(output);
 
 			//atlas.maxWidth = info.maxSize.width;
 			//atlas.maxHeight = info.maxSize.height;

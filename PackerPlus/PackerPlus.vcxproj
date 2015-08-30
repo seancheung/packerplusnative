@@ -101,6 +101,9 @@
     <ClCompile Include="jpeg\jquant1.c" />
     <ClCompile Include="jpeg\jquant2.c" />
     <ClCompile Include="jpeg\jutils.c" />
+    <ClCompile Include="jsoncpp\json_reader.cpp" />
+    <ClCompile Include="jsoncpp\json_value.cpp" />
+    <ClCompile Include="jsoncpp\json_writer.cpp" />
     <ClCompile Include="png\png.c" />
     <ClCompile Include="png\pngerror.c" />
     <ClCompile Include="png\pnggccrd.c" />
@@ -191,6 +194,17 @@
     <ClInclude Include="CXImage\ximawmf.h" />
     <ClInclude Include="CXImage\xiofile.h" />
     <ClInclude Include="CXImage\xmemfile.h" />
+    <ClInclude Include="jsoncpp\json\assertions.h" />
+    <ClInclude Include="jsoncpp\json\autolink.h" />
+    <ClInclude Include="jsoncpp\json\config.h" />
+    <ClInclude Include="jsoncpp\json\features.h" />
+    <ClInclude Include="jsoncpp\json\forwards.h" />
+    <ClInclude Include="jsoncpp\json\json.h" />
+    <ClInclude Include="jsoncpp\json\reader.h" />
+    <ClInclude Include="jsoncpp\json\value.h" />
+    <ClInclude Include="jsoncpp\json\version.h" />
+    <ClInclude Include="jsoncpp\json\writer.h" />
+    <ClInclude Include="jsoncpp\json_tool.h" />
     <ClInclude Include="RBTree\RBTree.h" />
     <ClInclude Include="RBTree\TextureTree.h" />
     <ClInclude Include="RBTree\Rect.h" />
@@ -238,6 +252,7 @@
     <None Include="jbig\patents.htm">
       <DeploymentContent>true</DeploymentContent>
     </None>
+    <None Include="jsoncpp\json_valueiterator.inl" />
     <None Include="tiff\libtiff.def" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

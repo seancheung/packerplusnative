@@ -54,8 +54,9 @@ bool TextureTree::add_texture(CxImage* input, int index, const char* name)
 	{
 		image = input;
 		this->index = index;
-		this->name = new char[128];
-		strcpy(this->name, name);
+		int len = strlen(name) + sizeof(char);
+		this->name = new char[len];
+		strcpy_s(this->name, len, name);
 		return true;
 	}
 
