@@ -1,28 +1,10 @@
 #include "../RBTree/Rect.h"
+#include "../CXImage/ximage.h"
 
 /*float rect data*/
 typedef Rect<float> UVRect;
+typedef Rect<int> TileRect;
 typedef unsigned char BYTE;
-
-/*size info*/
-union Size
-{
-	int width;
-	int height;
-
-	explicit Size(int width, int height)
-		: width(width),height(height)
-	{
-	}
-
-	Size()
-	{
-	}
-
-	~Size()
-	{
-	}
-};
 
 /*textures in&out*/
 struct Texture
@@ -41,9 +23,8 @@ struct Texture
 			delete[] path;
 	}
 
-	char* path;
+	WCHAR* path;
 	char* name;
-	Size size;
 };
 
 /*sprite data out*/
@@ -62,7 +43,7 @@ struct Sprite
 
 	char* name;
 	UVRect uv;
-	Size size;
+	TileRect rect;
 	int section;
 };
 

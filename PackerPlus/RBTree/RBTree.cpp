@@ -12,9 +12,9 @@ template <class T>
 RBTree<T>::~RBTree()
 {
 	if (left != nullptr)
-		delete[] left;
+		delete left;
 	if (right != nullptr)
-		delete[] right;
+		delete right;
 	left = nullptr;
 	right = nullptr;
 	parent = nullptr;

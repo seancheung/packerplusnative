@@ -1,36 +1,23 @@
 #include "PackerPlusWrapper.h"
-#include "../CXImage/ximage.h"
 #include "../RBTree/TextureTree.h"
 #include <string>
 #include <algorithm>
+#include "../jsoncpp/json/writer.h"
 
-
-void convert_char(const char* input, wchar_t*& output)
+void concat(const WCHAR* a, int i, WCHAR*& output)
 {
-	int len = MultiByteToWideChar(CP_ACP, 0, input, -1, nullptr, 0);
-	output = new wchar_t[len];
-	MultiByteToWideChar(CP_ACP, 0, input, -1, output, len);
-}
-
-void concat(const char* a, const char* b, char*& output)
-{
-	strcpy(output, (std::string(a) + std::string(b)).c_str());
-}
-
-void concat(const char* a, int i, char*& output)
-{
-	const char* dot = strchr(a, '.');
+	const WCHAR* dot = _tcschr(a, '.');
 	if (!dot || dot == a)
-		strcpy(output, (std::string(a) + std::to_string(i)).c_str());
+	_tcscpy(output, (std::wstring(a) + std::to_wstring(i)).c_str());
 	else
 	{
-		std::string str = std::string(a);
+		std::wstring str = std::wstring(a);
 		int index = str.find_last_of('.');
-		strcpy(output, (str.substr(0, index) + "_" + std::to_string(i) + std::string(dot + 1)).c_str());
+		_tcscpy(output, (str.substr(0, index) + _T("_") + std::to_wstring(i) + std::wstring(dot + 1)).c_str());
 	}
 }
 
-void create_empty(const int width, const int height, const char* path, int bit_depth, int format, const Color color)
+void create_empty(const int width, const int height, const WCHAR* path, int bit_depth, int format, const Color color)
 {
 	if (format < CXIMAGE_FORMAT_BMP || format > CXIMAGE_FORMAT_WMF)
 	{
@@ -52,6 +39,7 @@ void create_empty(const int width, const int height, const char* path, int bit_d
 	}
 
 	CxImage image = CxImage(width, height, bit_depth, format);
+	image.Clear(0);
 	bool alpha = false;
 	if (rgb.rgbReserved != 255)
 		alpha = image.AlphaCreate();
@@ -62,31 +50,16 @@ void create_empty(const int width, const int height, const char* path, int bit_d
 			image.SetPixelColor(x, y, rgb, alpha);
 		}
 	}
-	wchar_t* p;
-	convert_char(path, p);
-	image.Save(p, CXIMAGE_FORMAT_PNG);
-	delete[] p;
+	image.Save(path, CXIMAGE_FORMAT_PNG);
 }
 
-bool pack(const Texture textures[], const int count, const Size max_size, const char* output_path, int bit_depth, int format, int& output_texture_count, Texture*& output_textures, int& output_sprite_count, Sprite*& output_sprites)
+bool pack(const Texture textures[], const int count, const int max_width, const int max_height, const WCHAR* output_path, int bit_depth, int format, int& output_texture_count, Texture*& output_textures, int& output_sprite_count, Sprite*& output_sprites)
 {
 	/*length check*/
 	if (textures == nullptr || count == 0)
 	{
 		Debug::error("No textures to pack");
 		return false;
-	}
-	/*size check*/
-	for (int i = 0; i < count; i++)
-	{
-		if (textures[i].size.width > max_size.width || textures[i].size.height > max_size.height)
-		{
-			char* error = new char[1024];
-			concat("Target texture size is larger than max_size", textures[i].path, error);
-			Debug::error(error);
-			delete[] error;
-			return false;
-		}
 	}
 
 	if (format < CXIMAGE_FORMAT_BMP || format > CXIMAGE_FORMAT_WMF)
@@ -106,17 +79,25 @@ bool pack(const Texture textures[], const int count, const Size max_size, const 
 	std::vector<CxImage*> images;
 	for (int i = 0; i < count; i++)
 	{
-		wchar_t* p;
-		convert_char(textures[i].path, p);
-		CxImage* image = new CxImage(p, format);
-		delete[] p;
-		images.push_back(image);
+		CxImage* image = new CxImage();
+		if (!image->Load(textures[i].path, format))
+		{
+			Debug::error(image->GetLastError());
+			delete image;
+		}
+		else if (image->GetWidth() > max_width || image->GetHeight() > max_height)
+		{
+			Debug::error("Texture size is larger than max_size");
+			delete image;
+		}
+		else
+			images.push_back(image);
 	}
 
 	/*allocate rects*/
 
 	int index = count - 1;
-	Rect<int> rect = Rect<int>(0, 0, max_size.width, max_size.height);
+	Rect<int> rect = Rect<int>(0, 0, max_width, max_height);
 	std::vector<TextureTree*> trees;
 	while (index >= 0)
 	{
@@ -152,21 +133,20 @@ bool pack(const Texture textures[], const int count, const Size max_size, const 
 	{
 		output_textures[i].name = new char[128];
 		strcpy(output_textures[i].name, std::to_string(i).c_str());
-		output_textures[i].size = max_size;
-		output_textures[i].path = new char[1024];
+		output_textures[i].path = new WCHAR[1024];
 		if (i > 0)
 			concat(output_path, i, output_textures[i].path);
 		else
-			strcpy(output_textures[i].path, output_path);
+		_tcscpy(output_textures[i].path, output_path);
 		/*color depth and image format*/
-		CxImage image = CxImage(max_size.width, max_size.height, bit_depth, format);		
+		CxImage image = CxImage(max_width, max_height, bit_depth, format);
 		if (image.AlphaCreate())
 			image.AlphaSet(0);
 		trees[i]->build(image);
 		/*TODO: apply crop?*/
 		int rw = trees[i]->get_root_width();
 		int rh = trees[i]->get_root_height();
-		image.Crop(0,trees[i]->rect.height() - rh,rw,trees[i]->rect.height());
+		image.Crop(0, trees[i]->rect.height() - rh, rw, trees[i]->rect.height());
 		int w = image.GetWidth();
 
 		int h = image.GetHeight();
@@ -174,44 +154,37 @@ bool pack(const Texture textures[], const int count, const Size max_size, const 
 		trees[i]->get_bounds(bounds);
 		sort(bounds.begin(), bounds.end());
 		for (TextureTree* bound : bounds)
-		{			
+		{
 			UVRect uv = UVRect(
-				bound->rect.xMin / w,
-				bound->rect.yMin / h,
-				bound->rect.width() / w,
-				bound->rect.height() / h);
+				float(bound->rect.xMin) / float(w),
+				float(bound->rect.yMin) / float(h),
+				float(bound->rect.width()) / float(w),
+				float(bound->rect.height()) / float(h));
 			Sprite* sprite = new Sprite();
-			sprite->size = Size(bound->rect.width(), bound->rect.height());
+			sprite->rect = bound->rect;
 			sprite->name = new char[128];
 			strcpy(sprite->name, bound->name);
 			sprite->uv = uv;
 			sprite->section = i;
 			sprites.push_back(sprite);
 		}
-		wchar_t* p;
-		convert_char(output_textures[i].path, p);
-		bool result = image.Save(p, format);
-		delete[] p;
+
+		bool result = image.Save(output_textures[i].path, format);
+
 		if (result)
 		{
-			char* output = new char[1024];
-			concat("Successfully saved: ", textures[i].path, output);
-			Debug::log(output);
-			delete[] output;
+			Debug::log("Successfully saved");
 		}
 		else
 		{
-			char* output = new char[1024];
-			concat("Failed to save: ", textures[i].path, output);
-			Debug::error(output);
-			delete[] output;
+			Debug::error("Failed to save");
 		}
 	}
 
 	std::vector<TextureTree*>::iterator tree;
 	for (tree = trees.begin(); tree != trees.end(); ++tree)
 	{
-		delete[] *tree;
+		delete *tree;
 	}
 	trees.clear();
 
@@ -220,16 +193,57 @@ bool pack(const Texture textures[], const int count, const Size max_size, const 
 	output_sprites = new Sprite[output_sprite_count];
 	for (int i = 0; i < output_sprite_count; i++)
 	{
-		output_sprites[i] = *sprites[i];
+		output_sprites[i].name = new char[128];
+		strcpy(output_sprites[i].name, sprites[i]->name);
+		output_sprites[i].section = sprites[i]->section;
+		output_sprites[i].rect = sprites[i]->rect;
+		output_sprites[i].uv = sprites[i]->uv;
 	}
-	for (int i = 0; i < sprites.size(); i++)
-		delete[] sprites[i];
+
+	std::vector<Sprite*>::iterator sprite;
+	for (sprite = sprites.begin(); sprite != sprites.end(); ++sprite)
+	{
+		delete *sprite;
+	}
+	sprites.clear();
 
 	return true;
 }
 
-void release(void*& pointer)
+const char* to_json(const std::vector<Texture*> textures, std::vector<Sprite*> sprites)
+{
+	Json::Value output;
+	Json::Value tv, sv;
+	output.append(tv);
+	output.append(sv);
+	for (Texture* texture : textures)
+	{
+		Json::Value t;
+		tv.append(t);
+		t["name"] = texture->name;
+		t["path"] = texture->path;
+	}
+	for (Sprite* sprite : sprites)
+	{
+		Json::Value s;
+		sv.append(s);
+		s["name"] = sprite->name;
+		s["section"] = sprite->section;
+		s["rect"]["xMin"] = sprite->rect.xMin;
+		s["rect"]["xMax"] = sprite->rect.xMax;
+		s["rect"]["yMin"] = sprite->rect.yMin;
+		s["rect"]["yMax"] = sprite->rect.yMax;
+		s["uv"]["xMin"] = sprite->uv.xMin;
+		s["uv"]["xMax"] = sprite->uv.xMax;
+		s["uv"]["yMin"] = sprite->uv.yMin;
+		s["uv"]["yMax"] = sprite->uv.yMax;
+	}
+
+	return output.toStyledString().c_str();
+}
+
+void release(void* pointer)
 {
 	if (pointer != nullptr)
-		delete[] pointer;
+		delete pointer;	
 }

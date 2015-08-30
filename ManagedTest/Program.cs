@@ -9,93 +9,76 @@ namespace ManagedTest
 		{
 			Texture[] textures =
 			{
-				new Texture {name = "background_1", path = "background_1.png", size = new Size {width = 256, height = 256}},
-				new Texture {name = "background_2", path = "background_2.png", size = new Size {width = 256, height = 256}},
-				new Texture {name = "background_3", path = "background_3.png", size = new Size {width = 256, height = 256}},
-				new Texture {name = "background_4", path = "background_4.png", size = new Size {width = 256, height = 256}},
-				new Texture {name = "background_5", path = "background_5.png", size = new Size {width = 256, height = 256}}
+				new Texture {name = "background_1", path = "background_1.png"},
+				new Texture {name = "background_2", path = "background_2.png"},
+				new Texture {name = "background_3", path = "background_3.png"},
+				new Texture {name = "background_4", path = "background_4.png"},
+				new Texture {name = "background_5", path = "background_5.png"}
 			};
 
 			AtlasPlus atlas = new AtlasPlus();
 			Console.ReadLine();
 			Pack(textures, atlas, 1024, 1024, ColorDepth.TrueColor, Format.PNG, "pack.png");
 			Console.WriteLine(atlas);
+			//Create(1024, 1024, "empty.png", ColorDepth.TrueColor, Format.PNG, new Color(100, 250, 200, 255));
 			Console.ReadLine();
 		}
 
 		[DllImport("PackerPlus", EntryPoint = "release")]
 		private static extern void Release(IntPtr ptr);
 
+		[DllImport("PackerPlus", EntryPoint = "create_empty")]
+		private static extern void Create(int width, int height, [MarshalAs(UnmanagedType.LPWStr)] string path,
+			ColorDepth depth, Format format, Color color);
+
 		[DllImport("PackerPlus", EntryPoint = "pack")]
-		private static extern bool Pack([In,MarshalAs(UnmanagedType.LPArray,SizeParamIndex = 1)] Texture[] textures, [In] int count, [In] Size maxSize, [In] string path,
+		private static extern bool Pack([In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] Texture[] textures,
+			[In] int count, [In] int maxWidth, int maxHeight, [In, MarshalAs(UnmanagedType.LPWStr)] string path,
 			[In] ColorDepth depth, [In] Format format,
-			[Out] out int textureCount, [Out] out IntPtr atlasTextures, [Out] out int spriteCount, [Out] out IntPtr sprites);
+			[Out] out int textureCount, [Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 7)] out Texture[] atlasTextures,
+			[Out] out int spriteCount, [Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 9)] out Sprite[] sprites);
 
 		public static void Pack(Texture[] textures, AtlasPlus atlas, int width, int height, ColorDepth depth,
 			Format format, string path)
 		{
 			var count = textures.Length;
-			var size = new Size {width = width, height = height};
+			//var size = new Size {width = width, height = height};
 			Atlas info = new Atlas();
+			Texture[] atlasTextures;
+			Sprite[] sprites;
+			int textureCount;
+			int spriteCount;
 
-			//IntPtr texturePtr = ArrayToIntPtr(textures);
-			IntPtr atlasTexturesPtr = Marshal.AllocHGlobal(4);
-			IntPtr spritesPtr = Marshal.AllocHGlobal(4);
-			try
-			{
-				int textureCount;
-				int spriteCount;
-				Pack(textures, textures.Length, size, path, depth, format, out textureCount, out atlasTexturesPtr, out spriteCount,
-					out spritesPtr);
-			}
-			finally
-			{
-				Release(atlasTexturesPtr);
-				Release(spritesPtr);
-				//Marshal.FreeHGlobal(texturePtr);
-				Marshal.FreeHGlobal(atlasTexturesPtr);
-				Marshal.FreeHGlobal(spritesPtr);
-			}
 
-			atlas.maxWidth = info.maxSize.width;
-			atlas.maxHeight = info.maxSize.height;
-			atlas.textures = new TextureInfo[info.textureCount];
-			for (int i = 0; i < info.textureCount; i++)
-			{
-				atlas.textures[i] = new TextureInfo
-				{
-					width = info.textures[i].size.width,
-					height = info.textures[i].size.height,
-					texture = info.textures[i].path
-				};
-			}
-			atlas.sprites = new SpriteInfo[info.spriteCount];
-			for (int i = 0; i < info.spriteCount; i++)
-			{
-				atlas.sprites[i] = new SpriteInfo
-				{
-					name = info.sprites[i].name,
-					section = info.sprites[i].section,
-					sourceRect = new Rect(0, 0, info.sprites[i].size.width, info.sprites[i].size.height),
-					uvRect =
-						Rect.MinMaxRect(info.sprites[i].uv.xMin, info.sprites[i].uv.yMin, info.sprites[i].uv.xMax,
-							info.sprites[i].uv.yMax)
-				};
-			}
-		}
+			Pack(textures, textures.Length, width, height, path, depth, format, out textureCount, out atlasTextures,
+				out spriteCount,
+				out sprites);
 
-		private static IntPtr ArrayToIntPtr(Array array)
-		{
-			if (array == null || array.Length == 0)
-				return IntPtr.Zero;
-			var size = Marshal.SizeOf(array.GetType().GetElementType());
-			IntPtr mem = Marshal.AllocHGlobal(size*array.Length);
-			for (int i = 0; i < array.Length; i++)
-			{
-				Marshal.StructureToPtr(array.GetValue(i), mem, false);
-				mem = new IntPtr((long) mem + size);
-			}
-			return mem;
+			//atlas.maxWidth = info.maxSize.width;
+			//atlas.maxHeight = info.maxSize.height;
+			//atlas.textures = new TextureInfo[info.textureCount];
+			//for (int i = 0; i < info.textureCount; i++)
+			//{
+			//	atlas.textures[i] = new TextureInfo
+			//	{
+			//		width = info.textures[i].size.width,
+			//		height = info.textures[i].size.height,
+			//		texture = info.textures[i].path
+			//	};
+			//}
+			//atlas.sprites = new SpriteInfo[info.spriteCount];
+			//for (int i = 0; i < info.spriteCount; i++)
+			//{
+			//	atlas.sprites[i] = new SpriteInfo
+			//	{
+			//		name = info.sprites[i].name,
+			//		section = info.sprites[i].section,
+			//		//sourceRect = new Rect(, 0, info.sprites[i].size.width, info.sprites[i].size.height),
+			//		uvRect =
+			//			Rect.MinMaxRect(info.sprites[i].uv.xMin, info.sprites[i].uv.yMin, info.sprites[i].uv.xMax,
+			//				info.sprites[i].uv.yMax)
+			//	};
+			//}
 		}
 
 		#region Marshal
@@ -109,19 +92,20 @@ namespace ManagedTest
 			public float yMax;
 		}
 
-		[StructLayout(LayoutKind.Explicit)]
-		public struct Size
+		[StructLayout(LayoutKind.Sequential)]
+		private struct TileRect
 		{
-			[FieldOffset(0)] public int width;
-			[FieldOffset(0)] public int height;
+			public int xMin;
+			public int yMin;
+			public int xMax;
+			public int yMax;
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
 		public struct Texture
 		{
-			[MarshalAs(UnmanagedType.LPStr)] public string path;
+			[MarshalAs(UnmanagedType.LPWStr)] public string path;
 			[MarshalAs(UnmanagedType.LPStr)] public string name;
-			public Size size;
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -129,14 +113,12 @@ namespace ManagedTest
 		{
 			[MarshalAs(UnmanagedType.LPStr)] public string name;
 			public UVRect uv;
-			public Size size;
+			public TileRect rect;
 			public int section;
 		}
 
-		[StructLayout(LayoutKind.Sequential)]
 		private struct Atlas
 		{
-			public Size maxSize;
 			public int textureCount;
 			public Texture[] textures;
 			public int spriteCount;

@@ -22,7 +22,7 @@ TextureTree::~TextureTree()
 	if (name != nullptr)
 		delete[] name;
 	if (image != nullptr)
-		delete[] image;
+		delete image;
 }
 
 bool TextureTree::add_texture(CxImage* input, int index, const char* name)
