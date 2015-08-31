@@ -25,6 +25,8 @@ struct Texture
 
 	WCHAR* path;
 	char* name;
+	int width;
+	int height;
 };
 
 /*sprite data out*/

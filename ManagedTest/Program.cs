@@ -9,16 +9,20 @@ namespace ManagedTest
 		{
 			Texture[] textures =
 			{
-				new Texture {name = "background_1", path = "background_1.png"},
-				new Texture {name = "background_2", path = "background_2.png"},
-				new Texture {name = "background_3", path = "background_3.png"},
-				new Texture {name = "background_4", path = "background_4.png"},
-				new Texture {name = "background_5", path = "background_5.png"}
+				new Texture {name = "1", path = "1.png"},
+				new Texture {name = "2", path = "2.png"},
+				new Texture {name = "3", path = "3.png"},
+				new Texture {name = "4", path = "4.png"},
+				new Texture {name = "5", path = "5.png"},
+				new Texture {name = "6", path = "6.png"},
+				new Texture {name = "7", path = "7.png"},
+				new Texture {name = "8", path = "8.png"},
+				new Texture {name = "9", path = "9.png"},
 			};
 
 			AtlasPlus atlas = new AtlasPlus();
 			Console.ReadLine();
-			Pack(textures, atlas, 1024, 1024, ColorDepth.TrueColor, Format.PNG, "pack.png");
+			Pack(textures, atlas, 512, 512, ColorDepth.TrueColor, Format.PNG, "pack.png");
 			//Console.WriteLine(atlas);
 			//Create(1024, 1024, "empty.png", ColorDepth.TrueColor, Format.PNG, new Color(100, 250, 200, 255));
 			Console.ReadLine();
@@ -102,6 +106,8 @@ namespace ManagedTest
 		{
 			[MarshalAs(UnmanagedType.LPWStr)] public string path;
 			[MarshalAs(UnmanagedType.LPStr)] public string name;
+		    public int width;
+		    public int height;
 		}
 
 		[StructLayout(LayoutKind.Sequential)]

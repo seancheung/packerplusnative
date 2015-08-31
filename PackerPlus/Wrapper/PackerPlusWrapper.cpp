@@ -4,23 +4,35 @@
 #include <algorithm>
 #include "../jsoncpp/json/writer.h"
 
-void concat(const WCHAR* a, int i, WCHAR*& output)
+void concat_path(const WCHAR* a, int i, WCHAR*& output)
 {
-	const WCHAR* dot = _tcschr(a, '.');
+	const WCHAR* dot = wcschr(a, '.');
 	if (!dot || dot == a)
 	{
 		const WCHAR* copy = (std::wstring(a) + std::to_wstring(i)).c_str();
-		int len = wcslen(copy) + sizeof(WCHAR);
-		_tcscpy_s(output, len, copy);
+		copy_str(output, copy);
 	}
 	else
 	{
 		std::wstring str = std::wstring(a);
 		int index = str.find_last_of('.');
 		const WCHAR* copy = (str.substr(0, index) + _T("_") + std::to_wstring(i) + std::wstring(dot + 1)).c_str();
-		int len = wcslen(copy) + sizeof(WCHAR);
-		_tcscpy_s(output, len, copy);
+		copy_str(output, copy);
 	}
+}
+
+void copy_str(char*& dest, const char* src)
+{
+	int nlen = strlen(src) + sizeof(char);
+	dest = new char[nlen];
+	strcpy_s(dest, nlen, src);
+}
+
+void copy_str(WCHAR*& dest, const WCHAR* src)
+{
+	int nlen = wcslen(src) + sizeof(WCHAR);
+	dest = new WCHAR[nlen];
+	wcscpy_s(dest, nlen, src);
 }
 
 void create_empty(const int width, const int height, const WCHAR* path, int bit_depth, int format, const Color color)
@@ -136,17 +148,12 @@ bool pack(const Texture textures[], const int count, const int max_width, const 
 	for (int i = 0; i < trees.size(); i++)
 	{
 		Texture* texture = new Texture();
-		auto name = std::to_string(i).c_str();
-		int nlen = strlen(name) + sizeof(char);
-		texture->name = new char[nlen];
-		strcpy_s(texture->name, nlen, name);
+		copy_str(texture->name, ("texture_" + std::to_string(i)).c_str());
 		if (i > 0)
-			concat(output_path, i, texture->path);
+			concat_path(output_path, i, texture->path);
 		else
 		{
-			int plen = wcslen(output_path) + sizeof(WCHAR);
-			texture->path = new WCHAR[plen];
-			_tcscpy_s(texture->path, plen, output_path);
+			copy_str(texture->path, output_path);
 		}
 
 		/*color depth and image format*/
@@ -159,24 +166,21 @@ bool pack(const Texture textures[], const int count, const int max_width, const 
 		int rh = trees[i]->get_root_height();
 		/*apply crop*/
 		image.Crop(0, trees[i]->rect.height() - rh, rw, trees[i]->rect.height());
-		int w = image.GetWidth();
-		int h = image.GetHeight();
-
+		texture->width = image.GetWidth();
+		texture->height = image.GetHeight();
 		std::vector<TextureTree*> bounds;
 		trees[i]->get_bounds(bounds);
 		sort(bounds.begin(), bounds.end());
 		for (TextureTree* bound : bounds)
 		{
 			UVRect uv = UVRect(
-				float(bound->rect.xMin) / float(w),
-				float(bound->rect.yMin) / float(h),
-				float(bound->rect.width()) / float(w),
-				float(bound->rect.height()) / float(h));
+				float(bound->rect.xMin) / float(texture->width),
+				float(bound->rect.yMin) / float(texture->height),
+				float(bound->rect.width()) / float(texture->width),
+				float(bound->rect.height()) / float(texture->height));
 			Sprite* sprite = new Sprite();
 			sprite->rect = bound->rect;
-			int len = strlen(bound->name) + sizeof(char);
-			sprite->name = new char[len];
-			strcpy_s(sprite->name, len, bound->name);
+			copy_str(sprite->name, bound->name);
 			sprite->uv = uv;
 			sprite->section = i;
 			sprites.push_back(sprite);
@@ -222,40 +226,34 @@ bool pack(const Texture textures[], const int count, const int max_width, const 
 void to_json(const std::vector<Texture*> textures, std::vector<Sprite*> sprites, char*& json)
 {
 	Json::Value output;
-	Json::Value tv, sv;
-	for (Texture* texture : textures)
+	for (int i = 0; i < textures.size(); i++)
 	{
-		Json::Value t;		
-		t["name"] = texture->name;
-		t["path"] = texture->path;
-		tv.append(t);
-	}
-	for (Sprite* sprite : sprites)
-	{
-		Json::Value s;
-		s["name"] = sprite->name;
-		s["section"] = sprite->section;
-		s["rect"]["xMin"] = sprite->rect.xMin;
-		s["rect"]["xMax"] = sprite->rect.xMax;
-		s["rect"]["yMin"] = sprite->rect.yMin;
-		s["rect"]["yMax"] = sprite->rect.yMax;
-		s["uv"]["xMin"] = sprite->uv.xMin;
-		s["uv"]["xMax"] = sprite->uv.xMax;
-		s["uv"]["yMin"] = sprite->uv.yMin;
-		s["uv"]["yMax"] = sprite->uv.yMax;
-		sv.append(s);
+		output["textures"][i]["name"] = std::string(textures[i]->name);
+		output["textures"][i]["width"] = textures[i]->width;
+		output["textures"][i]["height"] = textures[i]->height;
+		int len = wcstombs(nullptr, textures[i]->path, 0)+1;
+		char* path = new char[len];
+		wcstombs(path, textures[i]->path, len);
+		//output["textures"][i]["path"] = std::string(reinterpret_cast<const char*>(textures[i]->path), sizeof(WCHAR) / sizeof(char) * wcslen(textures[i]->path));
+		output["textures"][i]["path"] = std::string(path);
+		delete[] path;
 	}
 
-	output["textures"] = tv;
-	output["sprites"] = sv;
-	const char* data = output.toStyledString().c_str();
-	int len = strlen(data) + sizeof(char);
-	json = new char[len];
-	strcpy_s(json, len, data);
-}
+	for (int i = 0; i < sprites.size(); i++)
+	{
+		output["sprites"][i]["name"] = std::string(sprites[i]->name);
+		output["sprites"][i]["section"] = sprites[i]->section;
+		output["sprites"][i]["rect"]["xMin"] = sprites[i]->rect.xMin;
+		output["sprites"][i]["rect"]["xMax"] = sprites[i]->rect.xMax;
+		output["sprites"][i]["rect"]["yMin"] = sprites[i]->rect.yMin;
+		output["sprites"][i]["rect"]["yMax"] = sprites[i]->rect.yMax;
+		output["sprites"][i]["uv"]["xMin"] = sprites[i]->uv.xMin;
+		output["sprites"][i]["uv"]["xMax"] = sprites[i]->uv.xMax;
+		output["sprites"][i]["uv"]["yMin"] = sprites[i]->uv.yMin;
+		output["sprites"][i]["uv"]["yMax"] = sprites[i]->uv.yMax;
+	}
 
-void release(void* pointer)
-{
-	if (pointer != nullptr)
-		delete pointer;
+	std::string str = output.toStyledString();
+	const char* data = str.c_str();
+	copy_str(json, data);
 }
