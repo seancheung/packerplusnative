@@ -1,23 +1,28 @@
+#define DEBUG_INFO 1
+#define DEBUG_LOAD 2
+#define DEBUG_COMPUTING 4
+#define DEBUG_PACKING 8
+
 #include "PackerPlusWrapper.h"
 #include "../RBTree/TextureTree.h"
 #include <string>
 #include <algorithm>
 #include "../jsoncpp/json/writer.h"
 
-void concat_path(const WCHAR* a, int i, WCHAR*& output)
+void concat_path(WCHAR*& dest, const WCHAR* src, int suffix)
 {
-	const WCHAR* dot = wcschr(a, '.');
-	if (!dot || dot == a)
+	const WCHAR* dot = wcschr(src, '.');
+	if (!dot || dot == src)
 	{
-		const WCHAR* copy = (std::wstring(a) + std::to_wstring(i)).c_str();
-		copy_str(output, copy);
+		copy_str(dest, src);
+		concat_str(dest, std::to_wstring(suffix).c_str());
 	}
 	else
 	{
-		std::wstring str = std::wstring(a);
+		std::wstring str = std::wstring(src);
 		int index = str.find_last_of('.');
-		const WCHAR* copy = (str.substr(0, index) + _T("_") + std::to_wstring(i) + std::wstring(dot + 1)).c_str();
-		copy_str(output, copy);
+		std::basic_string<wchar_t> res = str.substr(0, index) + L"_" + std::to_wstring(suffix) + str.substr(index);
+		copy_str(dest, res.c_str());
 	}
 }
 
@@ -33,6 +38,13 @@ void copy_str(WCHAR*& dest, const WCHAR* src)
 	int nlen = wcslen(src) + sizeof(WCHAR);
 	dest = new WCHAR[nlen];
 	wcscpy_s(dest, nlen, src);
+}
+
+void concat_str(WCHAR*& dest, const WCHAR* src)
+{
+	std::wstring str = std::wstring(dest) + std::wstring(src);
+	delete[] dest;
+	copy_str(dest, str.c_str());
 }
 
 void create_empty(const int width, const int height, const WCHAR* path, int bit_depth, int format, const Color color)
@@ -71,8 +83,11 @@ void create_empty(const int width, const int height, const WCHAR* path, int bit_
 	image.Save(path, CXIMAGE_FORMAT_PNG);
 }
 
-bool pack(const Texture textures[], const int count, const int max_width, const int max_height, const WCHAR* output_path, int bit_depth, int format, char*& output)
+bool pack(const Texture textures[], const int count, const int max_width, const int max_height, const WCHAR* output_path, int bit_depth, int format, char*& output, const Options option, const int debug)
 {
+	if ((debug & DEBUG_INFO) == DEBUG_INFO)
+		Debug::log("Checking...");
+
 	/*length check*/
 	if (textures == nullptr || count == 0)
 	{
@@ -93,6 +108,9 @@ bool pack(const Texture textures[], const int count, const int max_width, const 
 		bit_depth = 24;
 	}
 
+	if ((debug & DEBUG_INFO) == DEBUG_INFO)
+		Debug::log("Loading images...");
+
 	/*load images*/
 	std::vector<CxImage*> images;
 	for (int i = 0; i < count; i++)
@@ -107,12 +125,37 @@ bool pack(const Texture textures[], const int count, const int max_width, const 
 		{
 			Debug::error("Texture size is larger than max_size");
 			delete image;
+			free_vector(images);
+			return false;
 		}
 		else
 			images.push_back(image);
 	}
 
-	/*allocate rects*/
+	if ((debug & DEBUG_LOAD) == DEBUG_LOAD)
+	{
+		free_vector(images);
+		return false;
+	}
+
+	if ((debug & DEBUG_INFO) == DEBUG_INFO)
+		Debug::log("Computing rects...");
+
+	/*allocate rects algorithm*/
+	switch (option.algorithm)
+	{
+	case Plain: break;
+	case MaxRects:
+		{			
+			std::sort(images.begin(), images.end(), [](const CxImage* a, const CxImage* b)
+			          {
+						  /*measure weight: horizontal first*/
+						  return a->GetWidth() + a->GetHeight() < b->GetWidth() + b->GetHeight();
+			          });
+		}
+		break;
+	default: break;
+	}
 
 	int index = count - 1;
 	Rect<int> rect = Rect<int>(0, 0, max_width, max_height);
@@ -124,23 +167,32 @@ bool pack(const Texture textures[], const int count, const int max_width, const 
 
 		while (index >= 0)
 		{
-			int n = 0;
-			for (TextureTree* tree : trees)
+			bool notfound = false;
+			for (size_t i = 0; i < trees.size(); i++)
 			{
-				if (tree->add_texture(images[index], tindex++, textures[index].name))
+				if (trees[i]->add_texture(images[index], tindex++, textures[index].name))
 					break;
-				if (n = trees.size() - 1)
-				{
-					Debug::log("Multiple textures generated");
-					break;
-				}
-				n++;
+				else if (i == trees.size() - 1)
+					notfound = true;
 			}
-			if (n = trees.size() - 1)
+			if (notfound)
+			{
+				Debug::log("Multiple textures generated");
 				break;
-			index--;
+			}
+			else
+				index--;
 		}
 	}
+
+	if ((debug & DEBUG_COMPUTING) == DEBUG_COMPUTING)
+	{
+		free_vector(trees);
+		return false;
+	}
+
+	if ((debug & DEBUG_INFO) == DEBUG_INFO)
+		Debug::log("Building Textures...");
 
 	std::vector<Texture*> output_textures;
 	std::vector<Sprite*> sprites;
@@ -150,7 +202,7 @@ bool pack(const Texture textures[], const int count, const int max_width, const 
 		Texture* texture = new Texture();
 		copy_str(texture->name, ("texture_" + std::to_string(i)).c_str());
 		if (i > 0)
-			concat_path(output_path, i, texture->path);
+			concat_path(texture->path, output_path, i);
 		else
 		{
 			copy_str(texture->path, output_path);
@@ -165,7 +217,8 @@ bool pack(const Texture textures[], const int count, const int max_width, const 
 		int rw = trees[i]->get_root_width();
 		int rh = trees[i]->get_root_height();
 		/*apply crop*/
-		image.Crop(0, trees[i]->rect.height() - rh, rw, trees[i]->rect.height());
+		if (option.crop)
+			image.Crop(0, trees[i]->rect.height() - rh, rw, trees[i]->rect.height());
 		texture->width = image.GetWidth();
 		texture->height = image.GetHeight();
 		std::vector<TextureTree*> bounds;
@@ -192,6 +245,17 @@ bool pack(const Texture textures[], const int count, const int max_width, const 
 			Debug::error(image.GetLastError());
 	}
 
+	if ((debug & DEBUG_PACKING) == DEBUG_PACKING)
+	{
+		free_vector(output_textures);
+		free_vector(sprites);
+		free_vector(trees);
+		return false;
+	}
+
+	if ((debug & DEBUG_INFO) == DEBUG_INFO)
+		Debug::log("Formating json...");
+
 	char* json;
 	to_json(output_textures, sprites, json);
 	int len = strlen(json) + sizeof(char);
@@ -199,26 +263,12 @@ bool pack(const Texture textures[], const int count, const int max_width, const 
 	strcpy_s(output, len, json);
 	delete[] json;
 
-	std::vector<TextureTree*>::iterator tree;
-	for (tree = trees.begin(); tree != trees.end(); ++tree)
-	{
-		delete *tree;
-	}
-	trees.clear();
+	free_vector(output_textures);
+	free_vector(sprites);
+	free_vector(trees);
 
-	std::vector<Texture*>::iterator texture;
-	for (texture = output_textures.begin(); texture != output_textures.end(); ++texture)
-	{
-		delete *texture;
-	}
-	sprites.clear();
-
-	std::vector<Sprite*>::iterator sprite;
-	for (sprite = sprites.begin(); sprite != sprites.end(); ++sprite)
-	{
-		delete *sprite;
-	}
-	sprites.clear();
+	if ((debug & DEBUG_INFO) == DEBUG_INFO)
+		Debug::log("Done!");
 
 	return true;
 }
@@ -231,7 +281,7 @@ void to_json(const std::vector<Texture*> textures, std::vector<Sprite*> sprites,
 		output["textures"][i]["name"] = std::string(textures[i]->name);
 		output["textures"][i]["width"] = textures[i]->width;
 		output["textures"][i]["height"] = textures[i]->height;
-		int len = wcstombs(nullptr, textures[i]->path, 0)+1;
+		int len = wcstombs(nullptr, textures[i]->path, 0) + 1;
 		char* path = new char[len];
 		wcstombs(path, textures[i]->path, len);
 		//output["textures"][i]["path"] = std::string(reinterpret_cast<const char*>(textures[i]->path), sizeof(WCHAR) / sizeof(char) * wcslen(textures[i]->path));

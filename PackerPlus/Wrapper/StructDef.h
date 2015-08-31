@@ -65,3 +65,20 @@ struct Color
 	BYTE b;
 	BYTE a;
 };
+
+/*packing algorithm*/
+enum PackingAlgorithm
+{
+	/*no sorting*/
+	Plain,
+	/*sorting by size ascending, which width weights more than height*/
+	MaxRects
+};
+
+/*packing options*/
+struct Options
+{
+	bool crop;
+	PackingAlgorithm algorithm;
+};
+
