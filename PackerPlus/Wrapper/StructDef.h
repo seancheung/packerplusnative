@@ -71,14 +71,21 @@ enum PackingAlgorithm
 {
 	/*no sorting*/
 	Plain,
-	/*sorting by size ascending, which width weights more than height*/
-	MaxRects
+	/*sorting by size ascending(w+h)*/
+	MaxRects,
+	/*sorting by size ascending(w*h)*/
+	TightRects,
 };
 
 /*packing options*/
 struct Options
 {
-	bool crop;
-	PackingAlgorithm algorithm;
+	const int max_width;
+	const int max_height;
+	const WCHAR* output_path;
+	int bit_depth;
+	int format;
+	const bool crop;
+	const PackingAlgorithm algorithm;
 };
 

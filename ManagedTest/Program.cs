@@ -7,39 +7,47 @@ namespace ManagedTest
     {
         private static void Main(string[] args)
         {
-            Texture[] textures =
+            int n = 19;
+            Texture[] textures = new Texture[n];
+            while (n > 0)
             {
-                new Texture {name = "1", path = "1.png"},
-                new Texture {name = "2", path = "2.png"},
-                new Texture {name = "3", path = "3.png"},
-                new Texture {name = "4", path = "4.png"},
-                new Texture {name = "5", path = "5.png"},
-                new Texture {name = "6", path = "6.png"},
-                new Texture {name = "7", path = "7.png"},
-                new Texture {name = "8", path = "8.png"},
-                new Texture {name = "9", path = "9.png"},
-                new Texture {name = "9", path = "9.png"},
-                new Texture {name = "9", path = "9.png"},
-                new Texture {name = "9", path = "9.png"},
-                new Texture {name = "9", path = "9.png"},
-                new Texture {name = "9", path = "9.png"},
-                new Texture {name = "9", path = "9.png"},
-                new Texture {name = "9", path = "9.png"},
-                new Texture {name = "9", path = "9.png"},
-                new Texture {name = "9", path = "9.png"},
-                new Texture {name = "9", path = "9.png"},
-                new Texture {name = "9", path = "9.png"},
-                new Texture {name = "9", path = "9.png"},
-                new Texture {name = "9", path = "9.png"},
-                new Texture {name = "9", path = "9.png"}
-            };
+                textures[--n] = new Texture {name = n.ToString(), path = (n + 1) + ".png"};
+            }
+
+            //Texture[] textures =
+            //{
+            //    new Texture {name = "1", path = "1.png"},
+            //    new Texture {name = "2", path = "2.png"},
+            //    new Texture {name = "3", path = "3.png"},
+            //    new Texture {name = "4", path = "4.png"},
+            //    new Texture {name = "5", path = "5.png"},
+            //    new Texture {name = "6", path = "6.png"},
+            //    new Texture {name = "7", path = "7.png"},
+            //    new Texture {name = "8", path = "8.png"},
+            //    new Texture {name = "9", path = "9.png"},
+            //    new Texture {name = "10", path = "10.png"},
+            //    new Texture {name = "11", path = "11.png"}
+            //};
 
             AtlasPlus atlas = new AtlasPlus();
             Options options = new Options();
             options.crop = true;
             options.algorithm = Algorithm.MaxRects;
+            options.maxWidth = 512;
+            options.maxHeight = 512;
+            options.colorDepth = ColorDepth.TrueColor;
+            options.format = Format.PNG;
+            options.outputPath = "pack_m.png";
+            Options options2 = options;
+            options2.outputPath = "pack_t.png";
+            options2.algorithm = Algorithm.TightRects;
+            Options options3 = options;
+            options3.outputPath = "pack_p.png";
+            options3.algorithm = Algorithm.Plain;
             Console.ReadLine();
-            Pack(textures, atlas, 1024, 1024, ColorDepth.TrueColor, Format.PNG, "pack.png", options);
+            Pack(textures, atlas, options);
+            Pack(textures, atlas, options2);
+            Pack(textures, atlas, options3);
             //Console.WriteLine(atlas);
             //Create(1024, 1024, "empty.png", ColorDepth.TrueColor, Format.PNG, new Color(100, 250, 200, 255));
             Console.ReadLine();
@@ -53,16 +61,13 @@ namespace ManagedTest
             ColorDepth depth, Format format, Color color);
 
         [DllImport("PackerPlus", EntryPoint = "pack")]
-        private static extern bool Pack([In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] Texture[] textures,
-            [In] int count, [In] int maxWidth, int maxHeight, [In, MarshalAs(UnmanagedType.LPWStr)] string path,
-            [In] ColorDepth depth, [In] Format format,
-            [Out, MarshalAs(UnmanagedType.LPStr)] out string json, Options option, int debug);
+        private static extern bool Pack([MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] Texture[] textures,
+            int count, Options option, [Out, MarshalAs(UnmanagedType.LPStr)] out string json, int debug);
 
-        public static void Pack(Texture[] textures, AtlasPlus atlas, int width, int height, ColorDepth depth,
-            Format format, string path, Options options, int debug = 0)
+        public static void Pack(Texture[] textures, AtlasPlus atlas, Options options, int debug = 0)
         {
             string output;
-            Pack(textures, textures.Length, width, height, path, depth, format, out output, options, debug);
+            Pack(textures, textures.Length, options, out output, debug);
 
             Console.WriteLine(output);
         }
@@ -155,6 +160,11 @@ namespace ManagedTest
         [StructLayout(LayoutKind.Sequential)]
         public struct Options
         {
+            public int maxWidth;
+            public int maxHeight;
+            [MarshalAs(UnmanagedType.LPWStr)] public string outputPath;
+            public ColorDepth colorDepth;
+            public Format format;
             public bool crop;
             public Algorithm algorithm;
         }
@@ -162,7 +172,8 @@ namespace ManagedTest
         public enum Algorithm
         {
             Plain,
-            MaxRects
+            MaxRects,
+            TightRects
         }
 
         #endregion

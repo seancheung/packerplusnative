@@ -144,14 +144,15 @@ void TextureTree::build(CxImage& output)
 	{
 		int tw = image->GetWidth();
 		int th = image->GetHeight();
-		bool alpha = image->AlphaIsValid();
 
 		for (size_t x = 0; x < tw; x++)
 		{
 			for (size_t y = 0; y < th; y++)
 			{
-				RGBQUAD pixel = image->GetPixelColor(x, y, alpha);
-				output.SetPixelColor(x + rect.xMin, y + rect.yMin, pixel, alpha);
+				RGBQUAD pixel = image->GetPixelColor(x, y, true);
+				if (!image->AlphaIsValid())
+					pixel.rgbReserved = 255;
+				output.SetPixelColor(x + rect.xMin, y + rect.yMin, pixel, true);
 			}
 		}
 
@@ -161,14 +162,14 @@ void TextureTree::build(CxImage& output)
 			for (size_t y = 0; y < th; y++)
 			{
 				int x = tw - 1;
-				RGBQUAD pixel = image->GetPixelColor(x, y, alpha);
-				output.SetPixelColor(x + rect.xMin + padding, y + rect.yMin, pixel, alpha);
+				RGBQUAD pixel = image->GetPixelColor(x, y, true);
+				output.SetPixelColor(x + rect.xMin + padding, y + rect.yMin, pixel, true);
 			}
 			for (size_t x = 0; x < th; x++)
 			{
 				int y = th - 1;
-				RGBQUAD pixel = image->GetPixelColor(x, y, alpha);
-				output.SetPixelColor(x + rect.xMin, y + rect.yMin + padding, pixel, alpha);
+				RGBQUAD pixel = image->GetPixelColor(x, y, true);
+				output.SetPixelColor(x + rect.xMin, y + rect.yMin + padding, pixel, true);
 			}
 		}
 	}

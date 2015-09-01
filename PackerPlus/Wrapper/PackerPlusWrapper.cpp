@@ -83,7 +83,7 @@ void create_empty(const int width, const int height, const WCHAR* path, int bit_
 	image.Save(path, CXIMAGE_FORMAT_PNG);
 }
 
-bool pack(const Texture textures[], const int count, const int max_width, const int max_height, const WCHAR* output_path, int bit_depth, int format, char*& output, const Options option, const int debug)
+bool pack(const Texture textures[], const int count, Options option, char*& output, const int debug)
 {
 	if ((debug & DEBUG_INFO) == DEBUG_INFO)
 		Debug::log("Checking...");
@@ -95,17 +95,17 @@ bool pack(const Texture textures[], const int count, const int max_width, const 
 		return false;
 	}
 
-	if (format < CXIMAGE_FORMAT_BMP || format > CXIMAGE_FORMAT_WMF)
+	if (option.format < CXIMAGE_FORMAT_BMP || option.format > CXIMAGE_FORMAT_WMF)
 	{
 		Debug::warning("Unsupported format! PNG will be used.");
-		format = CXIMAGE_FORMAT_PNG;
+		option.format = CXIMAGE_FORMAT_PNG;
 	}
 
 	/*1, 4, 8, 24*/
-	if (bit_depth != 1 && bit_depth != 4 && bit_depth != 8 && bit_depth != 24)
+	if (option.bit_depth != 1 && option.bit_depth != 4 && option.bit_depth != 8 && option.bit_depth != 24)
 	{
 		Debug::warning("Color depth invalid! 24 will be used.");
-		bit_depth = 24;
+		option.bit_depth = 24;
 	}
 
 	if ((debug & DEBUG_INFO) == DEBUG_INFO)
@@ -116,12 +116,12 @@ bool pack(const Texture textures[], const int count, const int max_width, const 
 	for (int i = 0; i < count; i++)
 	{
 		CxImage* image = new CxImage();
-		if (!image->Load(textures[i].path, format))
+		if (!image->Load(textures[i].path, option.format))
 		{
 			Debug::error(image->GetLastError());
 			delete image;
 		}
-		else if (image->GetWidth() > max_width || image->GetHeight() > max_height)
+		else if (image->GetWidth() > option.max_width || image->GetHeight() > option.max_height)
 		{
 			Debug::error("Texture size is larger than max_size");
 			delete image;
@@ -146,11 +146,20 @@ bool pack(const Texture textures[], const int count, const int max_width, const 
 	{
 	case Plain: break;
 	case MaxRects:
-		{			
+		{
 			std::sort(images.begin(), images.end(), [](const CxImage* a, const CxImage* b)
 			          {
-						  /*measure weight: horizontal first*/
-						  return a->GetWidth() + a->GetHeight() < b->GetWidth() + b->GetHeight();
+				          /*measure weight*/
+				          return a->GetWidth() + a->GetHeight() < b->GetWidth() + b->GetHeight();
+			          });
+		}
+		break;
+	case TightRects:
+		{
+			std::sort(images.begin(), images.end(), [](const CxImage* a, const CxImage* b)
+			          {
+				          /*measure weight*/
+				          return a->GetWidth() * a->GetHeight() < b->GetWidth() * b->GetHeight();
 			          });
 		}
 		break;
@@ -158,7 +167,7 @@ bool pack(const Texture textures[], const int count, const int max_width, const 
 	}
 
 	int index = count - 1;
-	Rect<int> rect = Rect<int>(0, 0, max_width, max_height);
+	Rect<int> rect = Rect<int>(0, 0, option.max_width, option.max_height);
 	std::vector<TextureTree*> trees;
 	while (index >= 0)
 	{
@@ -202,16 +211,16 @@ bool pack(const Texture textures[], const int count, const int max_width, const 
 		Texture* texture = new Texture();
 		copy_str(texture->name, ("texture_" + std::to_string(i)).c_str());
 		if (i > 0)
-			concat_path(texture->path, output_path, i);
+			concat_path(texture->path, option.output_path, i);
 		else
 		{
-			copy_str(texture->path, output_path);
+			copy_str(texture->path, option.output_path);
 		}
 
 		/*color depth and image format*/
-		CxImage image = CxImage(max_width, max_height, bit_depth, format);
+		CxImage image = CxImage(option.max_width, option.max_height, option.bit_depth, option.format);
 		if (image.AlphaCreate())
-			image.AlphaSet(0);
+			image.AlphaClear();
 		trees[i]->build(image);
 
 		int rw = trees[i]->get_root_width();
@@ -239,7 +248,7 @@ bool pack(const Texture textures[], const int count, const int max_width, const 
 			sprites.push_back(sprite);
 		}
 
-		if (image.Save(texture->path, format))
+		if (image.Save(texture->path, option.format))
 			output_textures.push_back(texture);
 		else
 			Debug::error(image.GetLastError());

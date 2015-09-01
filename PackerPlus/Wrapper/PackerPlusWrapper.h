@@ -7,7 +7,7 @@ typedef unsigned char byte;
 extern "C"
 {
 	/*pack txtures into one or more atlas textures, return json string*/
-	IMPORT bool pack(const Texture textures[], const int count, const int max_width, const int max_height, const WCHAR* output_path, int bit_depth, int format, char*& output, const Options option, const int debug);
+	IMPORT bool pack(const Texture textures[], const int count, Options option, char*& output, const int debug);
 	/*create an empty texture*/
 	IMPORT void create_empty(const int width, const int height, const WCHAR* path, int bit_depth, int format, const Color color);
 }
