@@ -2,12 +2,16 @@
 #define DEBUG_LOAD 2
 #define DEBUG_COMPUTING 4
 #define DEBUG_PACKING 8
+#define DEBUG_JSON 16
+#define DEBUG_JSON_T 32
+#define DEBUG_JSON_S 64
 
 #include "PackerPlusWrapper.h"
 #include "../RBTree/TextureTree.h"
 #include <string>
 #include <algorithm>
 #include "../jsoncpp/json/writer.h"
+#include "assert.h"
 
 void concat_path(WCHAR*& dest, const WCHAR* src, int suffix)
 {
@@ -266,7 +270,17 @@ bool pack(const Texture textures[], const int count, Options option, char*& outp
 		Debug::log("Formating json...");
 
 	char* json;
-	to_json(output_textures, sprites, json);
+	to_json(output_textures, sprites, json, debug);
+
+	if ((debug & DEBUG_JSON) == DEBUG_JSON)
+	{
+		delete[] json;
+		free_vector(output_textures);
+		free_vector(sprites);
+		free_vector(trees);
+		return false;
+	}
+
 	int len = strlen(json) + sizeof(char);
 	output = static_cast<char*>(CoTaskMemAlloc(len));
 	strcpy_s(output, len, json);
@@ -282,37 +296,43 @@ bool pack(const Texture textures[], const int count, Options option, char*& outp
 	return true;
 }
 
-void to_json(const std::vector<Texture*> textures, std::vector<Sprite*> sprites, char*& json)
+void to_json(const std::vector<Texture*> textures, std::vector<Sprite*> sprites, char*& json, int debug)
 {
 	Json::Value output;
-	for (int i = 0; i < textures.size(); i++)
-	{
-		output["textures"][i]["name"] = std::string(textures[i]->name);
-		output["textures"][i]["width"] = textures[i]->width;
-		output["textures"][i]["height"] = textures[i]->height;
-		int len = wcstombs(nullptr, textures[i]->path, 0) + 1;
-		char* path = new char[len];
-		wcstombs(path, textures[i]->path, len);
-		//output["textures"][i]["path"] = std::string(reinterpret_cast<const char*>(textures[i]->path), sizeof(WCHAR) / sizeof(char) * wcslen(textures[i]->path));
-		output["textures"][i]["path"] = std::string(path);
-		delete[] path;
-	}
+	if ((debug & DEBUG_JSON_T) != DEBUG_JSON_T)
+		for (int i = 0; i < textures.size(); i++)
+		{
+			output["textures"][i]["name"] = std::string(textures[i]->name);
+			output["textures"][i]["width"] = textures[i]->width;
+			output["textures"][i]["height"] = textures[i]->height;
+			size_t size = wcstombs(nullptr, textures[i]->path, 0);
+			assert(size != -1);
+			int len = size + 1;
+			char* path = new char[len];
+			size_t result = wcstombs(path, textures[i]->path, len);
+			assert(result != -1);
+			//output["textures"][i]["path"] = std::string(reinterpret_cast<const char*>(textures[i]->path), sizeof(WCHAR) / sizeof(char) * wcslen(textures[i]->path));
+			output["textures"][i]["path"] = std::string(path);
+			delete[] path;
+		}
 
-	for (int i = 0; i < sprites.size(); i++)
-	{
-		output["sprites"][i]["name"] = std::string(sprites[i]->name);
-		output["sprites"][i]["section"] = sprites[i]->section;
-		output["sprites"][i]["rect"]["xMin"] = sprites[i]->rect.xMin;
-		output["sprites"][i]["rect"]["xMax"] = sprites[i]->rect.xMax;
-		output["sprites"][i]["rect"]["yMin"] = sprites[i]->rect.yMin;
-		output["sprites"][i]["rect"]["yMax"] = sprites[i]->rect.yMax;
-		output["sprites"][i]["uv"]["xMin"] = sprites[i]->uv.xMin;
-		output["sprites"][i]["uv"]["xMax"] = sprites[i]->uv.xMax;
-		output["sprites"][i]["uv"]["yMin"] = sprites[i]->uv.yMin;
-		output["sprites"][i]["uv"]["yMax"] = sprites[i]->uv.yMax;
-	}
+	if ((debug & DEBUG_JSON_S) != DEBUG_JSON_S)
+		for (int i = 0; i < sprites.size(); i++)
+		{
+			output["sprites"][i]["name"] = std::string(sprites[i]->name);
+			output["sprites"][i]["section"] = sprites[i]->section;
+			output["sprites"][i]["rect"]["xMin"] = sprites[i]->rect.xMin;
+			output["sprites"][i]["rect"]["xMax"] = sprites[i]->rect.xMax;
+			output["sprites"][i]["rect"]["yMin"] = sprites[i]->rect.yMin;
+			output["sprites"][i]["rect"]["yMax"] = sprites[i]->rect.yMax;
+			output["sprites"][i]["uv"]["xMin"] = sprites[i]->uv.xMin;
+			output["sprites"][i]["uv"]["xMax"] = sprites[i]->uv.xMax;
+			output["sprites"][i]["uv"]["yMin"] = sprites[i]->uv.yMin;
+			output["sprites"][i]["uv"]["yMax"] = sprites[i]->uv.yMax;
+		}
 
 	std::string str = output.toStyledString();
 	const char* data = str.c_str();
+	assert(data != nullptr);
 	copy_str(json, data);
 }

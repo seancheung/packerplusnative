@@ -13,7 +13,7 @@ extern "C"
 }
 
 /*get json string*/
-void to_json(const std::vector<Texture*> textures, std::vector<Sprite*> sprites, char*& json);
+void to_json(const std::vector<Texture*> textures, std::vector<Sprite*> sprites, char*& json, int debug);
 /*insert index before file extension*/
 void concat_path(WCHAR*& dest, const WCHAR* src, int suffix);
 /*copy src to dest*/
