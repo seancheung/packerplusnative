@@ -9,10 +9,8 @@ typedef unsigned char BYTE;
 /*textures in&out*/
 struct Texture
 {
-	Texture()
+	Texture() :path(nullptr), name(nullptr)
 	{
-		name = nullptr;
-		path = nullptr;
 	}
 
 	~Texture()
@@ -32,9 +30,8 @@ struct Texture
 /*sprite data out*/
 struct Sprite
 {
-	Sprite()
+	Sprite() :name(nullptr)
 	{
-		name = nullptr;
 	}
 
 	~Sprite()
@@ -52,14 +49,6 @@ struct Sprite
 /*RGB*/
 struct Color
 {
-	Color()
-	{
-	}
-
-	~Color()
-	{
-	}
-
 	BYTE r;
 	BYTE g;
 	BYTE b;
@@ -89,3 +78,21 @@ struct Options
 	const PackingAlgorithm algorithm;
 };
 
+/*atlas data*/
+struct Atlas
+{
+	Atlas() :textures(nullptr), sprites(nullptr)
+	{
+	}
+
+	~Atlas()
+	{
+		if (textures != nullptr)
+			delete[] textures;
+		if (sprites != nullptr)
+			delete[] sprites;
+	}
+
+	Texture** textures;
+	Sprite** sprites;
+};

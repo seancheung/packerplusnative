@@ -1,20 +1,11 @@
 #include "TextureTree.h"
 
-TextureTree::TextureTree()
+TextureTree::TextureTree() :padding(2), bleed(false), image(nullptr), name(nullptr)
 {
-	name = nullptr;
-	image = nullptr;
-	bleed = false;
-	padding = 2;
 }
 
-TextureTree::TextureTree(const Rect<int> rect)
+TextureTree::TextureTree(const Rect<int> rect) : padding(2), bleed(false), rect(rect), image(nullptr), name(nullptr)
 {
-	this->rect = Rect<int>(rect);
-	name = nullptr;
-	image = nullptr;
-	bleed = false;
-	padding = 2;
 }
 
 TextureTree::~TextureTree()
@@ -22,7 +13,10 @@ TextureTree::~TextureTree()
 	if (name != nullptr)
 		delete[] name;
 	if (image != nullptr)
+	{
+		image->Destroy();
 		delete image;
+	}
 }
 
 bool TextureTree::add_texture(CxImage* input, int index, const char* name)

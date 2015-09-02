@@ -1,11 +1,8 @@
 #include "RBTree.h"
 
 template <class T>
-RBTree<T>::RBTree()
+RBTree<T>::RBTree() :left(nullptr), right(nullptr), parent(nullptr)
 {
-	left = nullptr;
-	right = nullptr;
-	parent = nullptr;
 }
 
 template <class T>

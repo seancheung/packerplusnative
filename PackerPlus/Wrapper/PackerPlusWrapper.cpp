@@ -3,15 +3,14 @@
 #define DEBUG_COMPUTING 4
 #define DEBUG_PACKING 8
 #define DEBUG_JSON 16
-#define DEBUG_JSON_T 32
-#define DEBUG_JSON_S 64
 
 #include "PackerPlusWrapper.h"
 #include "../RBTree/TextureTree.h"
 #include <string>
 #include <algorithm>
-#include "../jsoncpp/json/writer.h"
 #include "assert.h"
+#include "../jsoncpp/json/writer.h"
+#include <fstream>
 
 void concat_path(WCHAR*& dest, const WCHAR* src, int suffix)
 {
@@ -51,43 +50,7 @@ void concat_str(WCHAR*& dest, const WCHAR* src)
 	copy_str(dest, str.c_str());
 }
 
-void create_empty(const int width, const int height, const WCHAR* path, int bit_depth, int format, const Color color)
-{
-	if (format < CXIMAGE_FORMAT_BMP || format > CXIMAGE_FORMAT_WMF)
-	{
-		Debug::warning("Unsupported format! PNG will be used.");
-		format = CXIMAGE_FORMAT_PNG;
-	}
-
-	RGBQUAD rgb = RGBQUAD();
-	rgb.rgbRed = color.r;
-	rgb.rgbGreen = color.g;
-	rgb.rgbBlue = color.b;
-	rgb.rgbReserved = color.a;
-
-	/*1, 4, 8, 24*/
-	if (bit_depth != 1 && bit_depth != 4 && bit_depth != 8 && bit_depth != 24)
-	{
-		Debug::warning("Bitdepth invalid! 24 will be used.");
-		bit_depth = 24;
-	}
-
-	CxImage image = CxImage(width, height, bit_depth, format);
-	image.Clear(0);
-	bool alpha = false;
-	if (rgb.rgbReserved != 255)
-		alpha = image.AlphaCreate();
-	for (int x = 0; x < width; x++)
-	{
-		for (int y = 0; y < height; y++)
-		{
-			image.SetPixelColor(x, y, rgb, alpha);
-		}
-	}
-	image.Save(path, CXIMAGE_FORMAT_PNG);
-}
-
-bool pack(const Texture textures[], const int count, Options option, char*& output, const int debug)
+bool pack(const Texture textures[], const int count, Options option, char*& json_data, const int debug)
 {
 	if ((debug & DEBUG_INFO) == DEBUG_INFO)
 		Debug::log("Checking...");
@@ -190,13 +153,15 @@ bool pack(const Texture textures[], const int count, Options option, char*& outp
 			}
 			if (notfound)
 			{
-				Debug::log("Multiple textures generated");
 				break;
 			}
 			else
 				index--;
 		}
 	}
+
+	if (trees.size() > 1)
+		Debug::log("Multiple textures generated");
 
 	if ((debug & DEBUG_COMPUTING) == DEBUG_COMPUTING)
 	{
@@ -214,12 +179,10 @@ bool pack(const Texture textures[], const int count, Options option, char*& outp
 	{
 		Texture* texture = new Texture();
 		copy_str(texture->name, ("texture_" + std::to_string(i)).c_str());
-		if (i > 0)
+		if (trees.size() > 1)
 			concat_path(texture->path, option.output_path, i);
 		else
-		{
 			copy_str(texture->path, option.output_path);
-		}
 
 		/*color depth and image format*/
 		CxImage image = CxImage(option.max_width, option.max_height, option.bit_depth, option.format);
@@ -281,11 +244,28 @@ bool pack(const Texture textures[], const int count, Options option, char*& outp
 		return false;
 	}
 
-	int len = strlen(json) + sizeof(char);
-	output = static_cast<char*>(CoTaskMemAlloc(len));
-	strcpy_s(output, len, json);
-	delete[] json;
 
+	/*std::wstring path(option.output_path);
+	int lastindex = path.find_last_of(L".");
+	std::wstring jpath = path.substr(0, lastindex) + L".json";
+	std::ofstream out(jpath);
+	if (out)
+	{
+		out << json;
+		out.close();
+	}
+	else
+	{
+		Debug::error("Failed to write data");
+		delete[] json;
+		return false;
+	}*/
+
+	unsigned long long size = strlen(json) + sizeof(char);
+	json_data = static_cast<char*>(CoTaskMemAlloc(size));
+	strcpy_s(json_data, size, json);
+
+	delete[] json;
 	free_vector(output_textures);
 	free_vector(sprites);
 	free_vector(trees);
@@ -299,39 +279,52 @@ bool pack(const Texture textures[], const int count, Options option, char*& outp
 void to_json(const std::vector<Texture*> textures, std::vector<Sprite*> sprites, char*& json, int debug)
 {
 	Json::Value output;
-	if ((debug & DEBUG_JSON_T) != DEBUG_JSON_T)
-		for (int i = 0; i < textures.size(); i++)
-		{
-			output["textures"][i]["name"] = std::string(textures[i]->name);
-			output["textures"][i]["width"] = textures[i]->width;
-			output["textures"][i]["height"] = textures[i]->height;
-			size_t size = wcstombs(nullptr, textures[i]->path, 0);
-			assert(size != -1);
-			int len = size + 1;
-			char* path = new char[len];
-			size_t result = wcstombs(path, textures[i]->path, len);
-			assert(result != -1);
-			//output["textures"][i]["path"] = std::string(reinterpret_cast<const char*>(textures[i]->path), sizeof(WCHAR) / sizeof(char) * wcslen(textures[i]->path));
-			output["textures"][i]["path"] = std::string(path);
-			delete[] path;
-		}
+	Json::Value textures_value;
+	Json::Value sprites_value;
+	for (int i = 0; i < textures.size(); i++)
+	{
+		Json::Value texture;
+		texture["name"] = Json::Value(textures[i]->name);
+		texture["width"] = Json::Value(textures[i]->width);
+		texture["height"] = Json::Value(textures[i]->height);
+		size_t size = wcstombs(nullptr, textures[i]->path, 0);
+		assert(size != -1);
+		int len = size + 1;
+		char* path = new char[len];
+		size_t result = wcstombs(path, textures[i]->path, len);
+		assert(result != -1);
+		texture["path"] = Json::Value(path);
+		delete[] path;
 
-	if ((debug & DEBUG_JSON_S) != DEBUG_JSON_S)
-		for (int i = 0; i < sprites.size(); i++)
-		{
-			output["sprites"][i]["name"] = std::string(sprites[i]->name);
-			output["sprites"][i]["section"] = sprites[i]->section;
-			output["sprites"][i]["rect"]["xMin"] = sprites[i]->rect.xMin;
-			output["sprites"][i]["rect"]["xMax"] = sprites[i]->rect.xMax;
-			output["sprites"][i]["rect"]["yMin"] = sprites[i]->rect.yMin;
-			output["sprites"][i]["rect"]["yMax"] = sprites[i]->rect.yMax;
-			output["sprites"][i]["uv"]["xMin"] = sprites[i]->uv.xMin;
-			output["sprites"][i]["uv"]["xMax"] = sprites[i]->uv.xMax;
-			output["sprites"][i]["uv"]["yMin"] = sprites[i]->uv.yMin;
-			output["sprites"][i]["uv"]["yMax"] = sprites[i]->uv.yMax;
-		}
+		textures_value.append(texture);
+	}
+	output["textures"] = textures_value;
 
-	std::string str = output.toStyledString();
+	for (int i = 0; i < sprites.size(); i++)
+	{
+		Json::Value sprite;
+		sprite["name"] = Json::Value(sprites[i]->name);
+		sprite["section"] = Json::Value(sprites[i]->section);
+		Json::Value rect;
+		rect["xMin"] = Json::Value(sprites[i]->rect.xMin);
+		rect["xMax"] = Json::Value(sprites[i]->rect.xMax);
+		rect["yMin"] = Json::Value(sprites[i]->rect.yMin);
+		rect["yMax"] = Json::Value(sprites[i]->rect.yMax);
+		sprite["rect"] = rect;
+		Json::Value uv;
+		uv["xMin"] = Json::Value(sprites[i]->uv.xMin);
+		uv["xMax"] = Json::Value(sprites[i]->uv.xMax);
+		uv["yMin"] = Json::Value(sprites[i]->uv.yMin);
+		uv["yMax"] = Json::Value(sprites[i]->uv.yMax);
+		sprite["uv"] = uv;
+
+		sprites_value.append(sprite);
+	}
+
+	output["sprites"] = sprites_value;
+
+	Json::StyledWriter writer;
+	std::string str = writer.write(output);
 	const char* data = str.c_str();
 	assert(data != nullptr);
 	copy_str(json, data);

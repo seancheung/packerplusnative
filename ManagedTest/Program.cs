@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 
 namespace ManagedTest
@@ -7,27 +9,9 @@ namespace ManagedTest
     {
         private static void Main(string[] args)
         {
-            int n = 19;
-            Texture[] textures = new Texture[n];
-            while (n > 0)
-            {
-                textures[--n] = new Texture {name = n.ToString(), path = (n + 1) + ".png"};
-            }
-
-            //Texture[] textures =
-            //{
-            //    new Texture {name = "1", path = "1.png"},
-            //    new Texture {name = "2", path = "2.png"},
-            //    new Texture {name = "3", path = "3.png"},
-            //    new Texture {name = "4", path = "4.png"},
-            //    new Texture {name = "5", path = "5.png"},
-            //    new Texture {name = "6", path = "6.png"},
-            //    new Texture {name = "7", path = "7.png"},
-            //    new Texture {name = "8", path = "8.png"},
-            //    new Texture {name = "9", path = "9.png"},
-            //    new Texture {name = "10", path = "10.png"},
-            //    new Texture {name = "11", path = "11.png"}
-            //};
+            var files =
+                Directory.GetFiles("Textures")
+                    .Select(f => new Texture {name = Path.GetFileNameWithoutExtension(f), path = f}).ToArray();
 
             AtlasPlus atlas = new AtlasPlus();
             Options options = new Options();
@@ -45,20 +29,11 @@ namespace ManagedTest
             options3.outputPath = "pack_p.png";
             options3.algorithm = Algorithm.Plain;
             Console.ReadLine();
-            Pack(textures, atlas, options);
-            Pack(textures, atlas, options2);
-            Pack(textures, atlas, options3);
-            //Console.WriteLine(atlas);
-            //Create(1024, 1024, "empty.png", ColorDepth.TrueColor, Format.PNG, new Color(100, 250, 200, 255));
+            Pack(files, atlas, options);
+            Pack(files, atlas, options2);
+            Pack(files, atlas, options3);
             Console.ReadLine();
         }
-
-        [DllImport("PackerPlus", EntryPoint = "release")]
-        private static extern void Release(IntPtr ptr);
-
-        [DllImport("PackerPlus", EntryPoint = "create_empty")]
-        private static extern void Create(int width, int height, [MarshalAs(UnmanagedType.LPWStr)] string path,
-            ColorDepth depth, Format format, Color color);
 
         [DllImport("PackerPlus", EntryPoint = "pack")]
         private static extern bool Pack([MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] Texture[] textures,
@@ -66,10 +41,12 @@ namespace ManagedTest
 
         public static void Pack(Texture[] textures, AtlasPlus atlas, Options options, int debug = 0)
         {
-            string output;
-            Pack(textures, textures.Length, options, out output, debug);
-
-            Console.WriteLine(output);
+            string json;
+            if (Pack(textures, textures.Length, options, out json, debug))
+            {
+                Console.WriteLine(json);
+                File.WriteAllText(Path.ChangeExtension(options.outputPath, ".json"), json);
+            }
         }
 
         #region Marshal
@@ -110,12 +87,11 @@ namespace ManagedTest
             public int section;
         }
 
+        [StructLayout(LayoutKind.Sequential)]
         private struct Atlas
         {
-            public int textureCount;
-            public Texture[] textures;
-            public int spriteCount;
-            public Sprite[] sprites;
+            [MarshalAs(UnmanagedType.LPArray)] public Texture[] textures;
+            [MarshalAs(UnmanagedType.LPArray)] public Sprite[] sprites;
         }
 
         [StructLayout(LayoutKind.Sequential)]
